@@ -182,3 +182,9 @@ Practice Questions
 
 [[AZ-104 — Implement and Manage Virtual Networking]]
 
+[[AZ104 Exercises]]
+[[Explore Azure Virtual Networks]]
+[[Evaluation of resources through Azure Policy]]
+[[Setting Azure policies and resources via REST]]
+[[Azure Active Directory Cheat Sheet]]
+

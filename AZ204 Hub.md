@@ -41,4 +41,15 @@
 [[AZ-204 Core Service Tiers and Plans Reference]]
 [[AZ-204_Consume_Azure_Services_Study_Guide]]
 [[OOP_in_Azure_SDK_Patterns]]
+[[Deploy containers to Azure App Service]]
+
+Study Guides & References
+	[[AZ-204 Azure Developer Associate Comprehensive Study Guide]]
+	[[AZ204 Reference Links]]
+	[[AZ204 VM Cheat Sheet]]
+	[[AZ-204_Quick_Reference]]
+
+Practice Questions
+	[[AZ 204 Practice questions]]
+	[[AZ-204_Practice_Questions]]
 
