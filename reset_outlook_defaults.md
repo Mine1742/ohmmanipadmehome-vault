@@ -74,5 +74,5 @@ For a complete reset, remove and re-add your Outlook profile under **Preferences
 
 ---
 
-## #outlook #reset #email #troubleshooting #how-to
+## #outlook #reset #email #troubleshooting #how-to #o365
 
