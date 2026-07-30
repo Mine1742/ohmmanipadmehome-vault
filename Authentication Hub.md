@@ -1,4 +1,11 @@
 [[Windows Hello → Azure AD → OIDC token end-to-end]]
 [[oauth_2_explanation]]
 [[oauth_2_companion_suite]]
+[[Kerberos_Tutorial_Walkthrough]]
+[[NTLM_Tutorial_Walkthrough]]
+[[Salesforce SSO]]
+[[Authentication Issues]]
+[[Microsoft Identity Platform & MSAL (Auth)]]
+[[setup_microsoft_authenticator]]
+[[LoginLoopTroubleshoot]]
 
