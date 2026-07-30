@@ -35,6 +35,7 @@
 [[Corpay]]
 [[corpay_default_job_not_saving]]
 [[Fire Alarm software]]
+[[Windows 10 IoT Enterprise LTSC 2021 — Fire Alarm Panel Programming Laptop]]
 [[Procore vs resource planning]]
 
 Vendor / Business Apps
