@@ -51,6 +51,7 @@ Vault entry point — start here.
 - [[User Guide Hub]]
 - [[AI Hub]]
 - [[Prompt Hub]]
+- [[AI Agent Toolkit Hub]]
 - [[Local LLM Project Overview]]
 
 ## Personal

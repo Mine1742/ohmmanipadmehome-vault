@@ -1,5 +1,6 @@
 
 [[Prompt Hub]]
+[[AI Agent Toolkit Hub]]
 
 [[AI Agents]]
 [[Agent Engineering]]
