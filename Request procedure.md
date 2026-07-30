@@ -1,0 +1,2 @@
+
+Being that we cannot handle most hardware requests, we will notify the user that we need to escalate to the onsite team, AK East, AK Central, AK N. Central, AK West. Then change the group and leave the agent blank

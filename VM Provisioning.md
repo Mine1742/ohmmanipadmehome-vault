@@ -1,0 +1,1 @@
+To add new disk space to a VM:   

@@ -1,0 +1,243 @@
+
+Your law firm is expanding its case load, and you're tasked with creating a new Linux web server to store critical documents from various sources: clients, other law firms, and law-enforcement offices. The web server lets you upload documents and store them on disk.
+
+ Tip
+
+This exercise uses Linux as the example, but the basic process of creating VMs and adding disks is the same for Windows. The primary difference is in partitioning and formatting the disk. On Windows, you can connect to your VM over Remote Desktop and use the built-in Disk Management tools or deploy a PowerShell script that's similar to the Bash script you'll use here.
+
+Your goal is to create a Linux VM and attach a new virtual hard disk (VHD) named **uploadDataDisk1** to store the `/uploads` directory.
+
+ Note
+
+This exercise is optional. If you want to complete this exercise, you'll need to create an Azure subscription before you begin. If you don't have an Azure account or you don't want to create one at this time, you can read through the instructions so you understand the information that's being presented.
+
+ Note
+
+You need to use a resource group to complete the steps in this exercise. You can use a resource group that you already created, or you can create a new resource group specifically for this exercise. If you choose to create a new resource group, that will make it easier to clean up any resources that you create as you complete the exercise. If you don't have an existing resource group or you want to create a new one specifically for this exercise, you can follow the steps in [Use the Azure portal and Azure Resource Manager to manage resource groups](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal) to create a resource group by using the Azure portal, or you can follow the steps in [Manage Azure resource groups by using Azure CLI](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-cli) to create a resource group by using the the Azure CLI.
+
+ Note
+
+In this unit, you use Azure Cloud Shell as a terminal. You can access Cloud Shell through the [Azure portal](https://portal.azure.com/) or the [Cloud Shell sign-in](https://shell.azure.com/). You don't have to install anything on your PC or laptop to use it.
+
+## Set Azure CLI default values
+
+The Azure CLI lets you set default values so you don't have to repeat them each time you run a command.
+
+You can specify the default Azure location, or region. This location is where your Azure VM is placed.
+
+Ideally, this location is close to your clients. In this case, select the closest region to you from the locations available in Azure.
+
+1. Open the [Azure Cloud Shell](https://shell.azure.com/).
+    
+2. Run `az configure` to set the default location you want to use. Replace **eastus** with the location you chose in the previous step.
+    
+    Azure CLI
+    
+    ```
+    az configure --defaults location=eastus
+    ```
+    
+     Tip
+    
+    You can use the **Copy** button to copy commands to the clipboard. To paste, right-click on a new line in the Cloud Shell terminal and select **Paste**, or use the Shift+Insert keyboard shortcut (⌘+V on macOS).
+    
+3. Run `az configure` to set the default resource group name. Replace **myResourceGroupName** with the name of an existing resource group, or the name of the resource group that you created for this exercise.
+    
+    Azure CLI
+    
+    ```
+    az configure --defaults group="myResourceGroupName"
+    ```
+    
+
+## Create a Linux VM
+
+Here, you create a Linux VM to host your web server.
+
+1. Run this `az vm create` command to create an Ubuntu Linux VM.
+    
+    Azure CLI
+    
+    ```
+    az vm create \
+      --name support-web-vm01 \
+      --image Canonical:UbuntuServer:16.04-LTS:latest \
+      --size Standard_DS1_v2 \
+      --admin-username azureuser \
+      --generate-ssh-keys
+    ```
+    
+    - The VM's name is **support-web-vm01**.
+    - Its size is **Standard_DS1_v2**.
+    - The admin username is **azureuser**. In practice, this name can be whatever you like.
+    - The `--generate-ssh-keys` argument generates an SSH keypair for you, allowing you to connect to your VM over SSH.
+    
+    The VM takes a few minutes to deploy. When the VM is ready, you get information about it in JSON format. Here's an example:
+    
+    JSON
+    
+    ```
+    {
+      "fqdns": "",
+      "id": "/subscriptions/aaaa0a0a-bb1b-cc2c-dd3d-eeeeee4e4e4e/resourceGroups/aaaa0a0a-bb1b-cc2c-dd3d-eeeeee4e4e4e/providers/Microsoft.Compute/virtualMachines/support-web-vm01",
+      "location": "eastus",
+      "macAddress": "00-0D-3A-10-63-0A",
+      "powerState": "VM running",
+      "privateIpAddress": "10.0.0.4",
+      "publicIpAddress": "104.211.38.211",
+      "resourceGroup": "aaaa0a0a-bb1b-cc2c-dd3d-eeeeee4e4e4e",
+      "zones": ""
+    }
+    ```
+    
+     Note
+    
+    In this lesson, you're using this VM to learn how to manage disks. In practice, you might also install web server and other software and then run `az vm open-port` to make the ports you need available to the outside world.
+    
+
+## Add an empty data disk to your VM
+
+Here, you create an empty data disk and attach it to your VM. Initially, Your data disk is 64 GB in size. Later, you'll mount this disk to the `/uploads` directory on your VM.
+
+ Tip
+
+For learning purposes, you're creating the VM and data disk as separate steps. In practice, you can specify the `--data-disk-sizes-gb` argument to the `az vm create` command to add data disks when the VM is created.
+
+1. Run the following `az vm disk attach` command to add a new empty disk to the VM.
+    
+    Azure CLI
+    
+    ```
+    az vm disk attach \
+      --vm-name support-web-vm01 \
+      --name uploadDataDisk1 \
+      --size-gb 64 \
+      --sku Premium_LRS \
+      --new
+    ```
+    
+    This command:
+    
+    - Names the disk **uploadDataDisk1**.
+    - Sets its size to 64 GB.
+    - Specifies the use of premium storage with local redundancy.
+
+To use the disk, you need to partition and format it. Let's do that next.
+
+## Initialize and format your data disk
+
+Your empty data drive needs to be initialized and formatted. The process to do that is the same as for a physical disk.
+
+For one-time tasks, you might manually connect to your VM over SSH and run the commands you need. However, to make the process more repeatable and less error-prone, you can specify your commands in a Bash script or a PowerShell script (if it's available).
+
+Using a script to automate the process has an added benefit: your script serves as documentation for how the process is performed. Others can read your script to understand how the system is configured. If you need to change the process, you can just modify your script and test it on a temporary scratch VM before you deploy your change to production.
+
+To automate the process in this lesson, you can use the _Custom Script Extension_. The Custom Script Extension is an easy way to download and run scripts on your Azure VMs. It's just one of the many ways you can configure the system after your VM is up and running.
+
+You can store your scripts in Azure storage, or in a public location such as GitHub. You can run scripts manually or as part of a more automated deployment. Here, you run an Azure CLI command to download a premade Bash script from GitHub and execute it on your VM.
+
+For learning purposes, let's also run a few commands on your VM to verify that the VM is configured as you expect.
+
+1. Run `az vm show` to get your VM's public IP address and save the IP address as a Bash variable.
+    
+    Azure CLI
+    
+    ```
+    ipaddress=$(az vm show \
+      --name support-web-vm01 \
+      --show-details \
+      --query [publicIps] \
+      --output tsv)
+    ```
+    
+2. Run the following `ssh` command to run the `lsblk` command on your VM over an SSH connection using the `ipaddress` variable data you created in the previous step. Recall that `azureuser` was the admin username we used when we created the VM. If you chose a different name, use that instead. Enter _yes_ when prompted.
+    
+    Bash
+    
+    ```
+    ssh azureuser@$ipaddress lsblk
+    ```
+    
+    The output of this command should look like the following.
+    
+    Output
+    
+    ```
+    NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+    sdb       8:16   0    7G  0 disk 
+    └─sdb1    8:17   0    7G  0 part /mnt
+    sr0      11:0    1  628K  0 rom  
+    sdc       8:32   0   64G  0 disk 
+    sda       8:0    0   30G  0 disk 
+    ├─sda14   8:14   0    4M  0 part 
+    ├─sda15   8:15   0  106M  0 part /boot/efi
+    └─sda1    8:1    0 29.9G  0 part /
+    ```
+    
+    Notice that the 64-GB drive (`sdc`) you created isn't mounted. The drive is listed this way because it isn't initialized yet.
+    
+3. Run the following `az vm extension set` command to run the premade Bash script on your VM.
+    
+     Warning
+    
+    The script modifies `/etc/fstab`. Improperly modifying the `/etc/fstab` file could result in an unbootable system. Always test configuration changes on a temporary scratch system before you deploy to production. Refer to your distribution's documentation to learn how to properly modify this file. In production, we also recommend that you create a backup of this file so you can restore the configuration if needed.
+    
+    Azure CLI
+    
+    ```
+    az vm extension set \
+      --vm-name support-web-vm01 \
+      --name customScript \
+      --publisher Microsoft.Azure.Extensions \
+      --settings '{"fileUris":["https://raw.githubusercontent.com/MicrosoftDocs/mslearn-add-and-size-disks-in-azure-virtual-machines/master/add-data-disk.sh"]}' \
+      --protected-settings '{"commandToExecute": "./add-data-disk.sh"}'
+    ```
+    
+    While the command runs, you can [examine the Bash script](https://raw.githubusercontent.com/MicrosoftDocs/mslearn-add-and-size-disks-in-azure-virtual-machines/master/add-data-disk.sh) from a separate browser tab, if you'd like.
+    
+    To summarize, the script:
+    
+    - Partitions the drive `/dev/sdc`.
+    - Creates an ext4 filesystem on the drive.
+    - Creates the `/uploads` directory, which we use as our mount point.
+    - Attaches the disk to the mount point.
+    - Updates `/etc/fstab` so that the drive is mounted automatically after the system reboots.
+4. To verify the configuration, run the same `ssh` command as you did previously to run the `lsblk` command on your VM over an SSH connection.
+    
+    Bash
+    
+    ```
+    ssh azureuser@$ipaddress lsblk
+    ```
+    
+    You should find that `sdc/sdc1` is partitioned and mounted to the `/uploads` directory as you expect.
+    
+    Output
+    
+    ```
+    NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+    sdb       8:16   0    7G  0 disk 
+    └─sdb1    8:17   0    7G  0 part /mnt
+    sr0      11:0    1  628K  0 rom  
+    sdc       8:32   0   64G  0 disk 
+    └─sdc1    8:33   0   64G  0 part /uploads
+    sda       8:0    0   30G  0 disk 
+    ├─sda14   8:14   0    4M  0 part 
+    ├─sda15   8:15   0  106M  0 part /boot/efi
+    └─sda1    8:1    0 29.9G  0 part /
+    ```
+    
+
+ Tip
+
+Some Linux kernels support TRIM to discard unused blocks on disks. This feature is available on Azure disks and can save you money if you create large files and then delete them. Learn how to [turn this feature on](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/attach-disk-portal#trimunmap-support-for-linux-in-azure) in the Azure documentation.
+
+## Summary
+
+In this exercise, you created a data disk and attached it to your VM. You used the Custom Script Extension to run a premade Bash script on your VM to make the process more repeatable. The Bash script partitions, formats, and mounts your disk so that your web server can write to it.
+
+Now that the data disk on your VM is prepared, let's explore a bit more about the various types of disks you can create. Your primary decision is whether to choose Standard or Premium storage.
+
+
+
+

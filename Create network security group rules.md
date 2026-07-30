@@ -1,0 +1,41 @@
+It's easy to add security rules to control inbound and outbound traffic in the Azure portal. You can configure your virtual network security group rule settings, and select from a large variety of communication services, including HTTPS, RDP, FTP, and DNS.
+
+### Things to know about configuring security rules
+
+Let's look at some of the properties you need to specify to create your security rules. As you review these settings, think about the traffic rules you need to create and what services can fulfill your network requirements.
+
+![Screenshot that shows how to configure source and destination settings to create a security rule in the Azure portal.](https://learn.microsoft.com/en-us/training/wwl-azure/configure-network-security-groups/media/add-network-security-rule-2f306d23.png)
+
+- **Source**: Identifies how the security rule controls **inbound** traffic. The value specifies a specific source IP address range to allow or deny. The source filter can be any resource, an IP address range, an application security group, or a default tag.
+    
+- **Destination**: Identifies how the security rule controls **outbound** traffic. The value specifies a specific destination IP address range to allow or deny. The destination filter value is similar to the source filter. The value can be any resource, an IP address range, an application security group, or a default tag.
+    
+- **Service**: Specifies the destination protocol and port range for the security rule. You can choose a predefined service like RDP or SSH or provide a custom port range. There are a large number of services to select from.
+    
+    ![Screenshot that shows service rule options for a security rule in the Azure portal.](https://learn.microsoft.com/en-us/training/wwl-azure/configure-network-security-groups/media/security-services.png)
+    
+- **Priority**: Assigns the priority order value for the security rule. Rules are processed according to the priority order of all rules for a network security group, including a subnet and network interface. The lower the priority value, the higher priority for the rule.
+    
+    ![Screenshot that shows how to set the priority value for a security rule in the Azure portal.](https://learn.microsoft.com/en-us/training/wwl-azure/configure-network-security-groups/media/security-priority.png)
+    
+
+### When to use augmented security rules
+
+A single network security group rule can contain multiple values in the Source, Destination, and Service fields. This approach, called augmented security rules, reduces the total number of rules needed and simplifies NSG management.
+
+**Things to know about augments security rules**
+
+- **Multiple IP addresses**: Combine multiple IP addresses into one rule.
+    
+- **Multiple port ranges**: Specify multiple ports and ranges in the Service field.
+    
+- **Service tags and ASGs**: Mix service tags, application security groups, and IP addresses within the same rule.
+    
+- **Reduced rule count**: Instead of creating separate rules for each IP range or port, combine them into fewer, more manageable rules.
+    
+
+In enterprise environments with many IP ranges or services, augmented rules prevent NSG rule sprawl. For example, instead of creating four separate rules for ports 80, 443, 8080, and 8090, create one rule with all the ports.
+
+ Tip
+
+Expand your learning with the [Secure and isolate access to Azure resources by using network security groups and service endpoints](https://learn.microsoft.com/en-us/training/modules/secure-and-isolate-with-nsg-and-service-endpoints/) training module. This module includes a sandbox where you can practice.

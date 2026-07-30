@@ -1,0 +1,11 @@
+{
+  "claude-code-ide:send-to-claude": [
+    {
+      "modifiers": [
+        "Alt",
+        "Mod"
+      ],
+      "key": "C"
+    }
+  ]
+}

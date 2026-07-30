@@ -1,0 +1,1 @@
+Use SimpleHelp to update the password if the password on file not working. Remote in from their Client Bucket > Click in the the Gear Icon > Launch Remote Command > Computer Management as Elevated > then change the password for the admin account. The admin account may be named differently
