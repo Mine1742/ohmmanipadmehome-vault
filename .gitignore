@@ -2,3 +2,4 @@
 .obsidian/cache
 .trash/
 .claude/settings.local.json
+.claude/scripts/vault-sync.log
