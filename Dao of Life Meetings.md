@@ -24,4 +24,5 @@ for what they'd cover (not yet held).
 ## Meeting log
 - [[Dao of Life Meeting 2026-06-20]]
 - [[Dao of Life Meeting 2026-07-28]]
+- [[Dao of Life Meeting 2026-08-03]] (automated growth-cycle run)
 
