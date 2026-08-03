@@ -19,7 +19,7 @@ Join us as we gather to give thanks for the season's abundance. Together we'll s
 
 "We reject hunger and poverty, and work so all may share in dignity and abundance." — The Dao of Life Creed
 
-All are welcome • Bring a friend • Join us in service and fellowship
+All are welcome • Bring a friend • Join us in comradery and solidarity 
 
 📍 Michaela Garden, King George, VA
 🕐 [Time TBD]
@@ -34,8 +34,7 @@ We gather twice a month to reflect, breathe, and act together — a candle lit, 
 
 "We walk in peace, choosing harmony over conflict... This is the Dao of Life: a path of compassion, justice, and shared humanity." — The Dao of Life Creed
 
-All are welcome • Bring a friend • Join us in service and fellowship
-
+All are welcome • Bring a friend • Join us in comradery and solidarity 
 🕐 [Time TBD]
 📍 Dao of Life, Maryland HQ
 
