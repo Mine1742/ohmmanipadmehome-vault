@@ -4,6 +4,7 @@ Welcome to your Local LLM Project! This is the central hub for your project note
 
 ## Main Sections
 
+- [[Local LLM Project Log|Project Log]]
 - [[system_requirements|System Requirements]]
 - [[installation_guide|Installation Guide]]
 - [[pytorch_setup|PyTorch Setup]]

@@ -12,6 +12,8 @@
 [[AZ 104 Hub]]
 [[AZ 200 Hub]]
 
+[[Azure Study Log]]
+
 
 
 

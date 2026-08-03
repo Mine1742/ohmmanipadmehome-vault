@@ -1,12 +1,22 @@
 #personal
 
+[[Goals]]
+[[Life Dashboard]]
+[[Personal Tasks]]
+[[Hobby Log]]
+
 [[Stream of concious]]
 [[Automations]]
 [[App Ideas]]
 [[Skills to learn]]
-[[Annual Eval Notes]]
+
 [[HAM Radio Technician]]
-[[Thanksgiving_2025_Proposed_Menu_Changes_v1.2]]
+[[Thanksgiving_2025_Proposed_Menu]]
 [[sports_card_scanning_recommendations]]
-[[Bridge training]]
-[[links]]
+
+[[Greenhouse]]
+[[Solar Power]]
+[[Gardening]]
+
+[[Job links]]
+	[[Annual Eval Notes]]

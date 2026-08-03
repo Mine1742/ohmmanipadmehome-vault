@@ -1,5 +1,8 @@
 [[Directory]]
 
+Templates:
+	[[Help Desk KB Template]]
+
 Sub Directories:
 
 [[Account Management]]

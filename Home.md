@@ -54,5 +54,11 @@ Vault entry point — start here.
 - [[AI Agent Toolkit Hub]]
 - [[Local LLM Project Overview]]
 
+## Dao of Life Church
+- [[Dao of Life Hub]]
+
+## Entrepreneurship
+- [[Entrepreneur Hub]]
+
 ## Personal
 - [[Personal Hub]]
