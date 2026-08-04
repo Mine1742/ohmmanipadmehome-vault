@@ -20,6 +20,6 @@ Authoring and reference space for the Claude Code assets used across your projec
 ## Workflow
 
 1. Draft/design a new agent or skill here first if it needs thought (naming, scope, tool access).
-2. Write the real file into `.claude/agents/<name>.md` or `.claude/skills/<name>/SKILL.md` in whichever project it belongs to (this vault, or another repo).
+2. Write the real file into `.claude/agents/<name>.md` or `.claude/skills/<name>/SKILL.md` in whichever project it belongs to (this vault, or another repo). In this vault, `.claude/skills` is a junction to `Claude Skills/` at the vault root — write there instead so it's directly visible/editable in Obsidian (see [[CLAUDE]]).
 3. Add one row to the relevant catalog note so you can find it again later.
 4. For per-project work, start from [[Project Context Template]] (→ that project's `CLAUDE.md`) and [[Project Goal Template]] (→ a goal file for that initiative).

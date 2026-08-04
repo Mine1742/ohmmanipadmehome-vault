@@ -22,8 +22,10 @@ description: >
    trigger condition or output is genuinely different (e.g. `dao-of-life-ops` logs what
    already happened; `dao-of-life-service-planning` plans what hasn't happened yet).
 
-3. **Write the skill file** at `.claude/skills/<kebab-case-name>/SKILL.md`, matching the
-   format in `AI Agent Toolkit/Skills/Skill Template.md`:
+3. **Write the skill file** at `Claude Skills/<kebab-case-name>/SKILL.md` — this is the
+   real, Obsidian-visible location; `.claude/skills` is a junction pointing at it (both
+   paths work, but write to `Claude Skills/` since that's what Obsidian indexes and lets
+   you edit directly). Match the format in `AI Agent Toolkit/Skills/Skill Template.md`:
    - `name`: kebab-case, must match the folder name.
    - `description`: the single most important field. 1–2 sentences covering WHAT the
      skill does and WHEN to trigger it — concrete trigger phrases the user might

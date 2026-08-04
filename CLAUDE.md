@@ -16,11 +16,11 @@ This is an Obsidian vault, not a software project — mostly IT/sysadmin knowled
 
 The actual functional Claude Code config lives in the usual places and is the source of truth Claude Code loads:
 - `.claude/agents/` — subagent definitions
-- `.claude/skills/` — skill definitions
+- `.claude/skills/` — skill definitions. In this vault specifically, `.claude/skills` is a directory junction pointing at `Claude Skills/` (a normal folder at the vault root) — Obsidian doesn't traverse into junctions when indexing, so the real, Obsidian-editable `SKILL.md` files live at `Claude Skills/<name>/SKILL.md`. Writing to either path works (the junction is transparent), but prefer `Claude Skills/` as the canonical path since that's the real location.
 - `.mcp.json` (if present) — MCP server config
 - This file (`CLAUDE.md`) — always-loaded project context
 
-When asked to create a new agent or skill "for this vault," write the real file into `.claude/agents/` or `.claude/skills/`, then add/update its entry in the matching catalog note under `AI Agent Toolkit/` rather than duplicating the full content into Obsidian.
+When asked to create a new agent or skill "for this vault," write the real file into `.claude/agents/` or `Claude Skills/<name>/SKILL.md`, then add/update its entry in the matching catalog note under `AI Agent Toolkit/` rather than duplicating the full content into Obsidian.
 
 ## Git
 
