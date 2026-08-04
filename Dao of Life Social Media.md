@@ -9,6 +9,7 @@ inlined below if short), with a status: drafted / scheduled / posted.
 |--------------|-------------|-------|--------|
 | 2026-07-31 | Instagram | Harvest Ritual (Sep 20, 2026) | Drafted |
 | 2026-08-03 | Instagram, Facebook | Regular Congregational Service (Sun Aug 16, 2026) | Drafted |
+| 2026-08-04 | Instagram, Facebook | Current events reflection — worker solidarity & global hunger (Core Philosophy) | Drafted |
 
 ## Drafts
 
@@ -39,3 +40,17 @@ All are welcome • Bring a friend • Join us in comradery and solidarity
 📍 Dao of Life, Maryland HQ
 
 #DaoOfLife #Solidarity #MutualAid #Community #Meditation
+
+### Current Events Reflection — Instagram/Facebook — 2026-08-04
+
+This week, dockworkers up and down the coast walked off the job in solidarity with fellow union members on strike over pay and healthcare — refusing to let one group's fight be fought alone. This week too, the World Food Programme is warning that climate shocks and conflict are pushing hunger higher across a dozen countries, even as the world made real progress against hunger the past three years running.
+
+Solidarity and hunger aren't separate headlines to us. They're the same fight.
+
+"We stand in solidarity with workers, honoring the hands that feed, build, and clothe us. We reject hunger and poverty, and work so all may share in dignity and abundance." — The Dao of Life Creed
+
+We don't have power over dockyards or global food systems. But we have a garden, a table, and each other — and we believe acts of care at that scale are worship too, not a lesser substitute for it.
+
+All are welcome • Bring a friend • Join us in comradery and solidarity
+
+#DaoOfLife #Solidarity #MutualAid #WorkerSolidarity #EndHunger #Community
