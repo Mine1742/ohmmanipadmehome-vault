@@ -1,6 +1,6 @@
 # Ohmmanipadmehome Vault
 
-This is an Obsidian vault, not a software project — mostly IT/sysadmin knowledge base (ArchKey Mechanical/electric group companies), Azure certification study notes (AZ-104/200/204), an AI/local-LLM learning project, and personal notes. It's tracked in git purely as an edit history safety net, not for collaboration.
+This is an Obsidian vault, not a software project — mostly IT/sysadmin knowledge base (ArchKey Mechanical/electric group companies), Azure certification study notes (AZ-104/200/204), an AI/local-LLM learning project, and personal notes. It's tracked in git as an edit history safety net and as the sync mechanism between this machine and scheduled cloud automation (see Git section below) — not for human collaboration.
 
 ## Structure & conventions
 
@@ -24,4 +24,16 @@ When asked to create a new agent or skill "for this vault," write the real file 
 
 ## Git
 
-Baseline-commit-and-diff workflow: this repo has no remote, no CI, no collaborators. Normal safety rules still apply (don't force-push, don't discard uncommitted work) but there's no PR process to follow.
+Baseline-commit-and-diff workflow, backed by a private GitHub remote
+(`github.com/Mine1742/ohmmanipadmehome-vault`) — still no CI, no human
+collaborators, no PR process to follow. Two automated writers push to this
+remote on their own schedules:
+- A local Task Scheduler job (`.claude/scripts/vault-sync.ps1`, daily 7am)
+  that pulls, commits any local edits, and pushes.
+- Two scheduled cloud routines — "Dao of Life Growth Cycle" (Mon/Thu) and
+  "Personal Hub Weekly Review" (Mon) — that commit and push their own work.
+
+Normal safety rules still apply (don't force-push, don't discard uncommitted
+work), but because of the automated writers, pull before you push, and check
+`.claude/scripts/vault-sync.log` if a morning sync looks like it didn't go
+through.
