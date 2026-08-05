@@ -5,6 +5,7 @@ Materials
 [[Greenhouse Design]]
 
 Solar
+[[Solar Power]]
 
 Irrigation
 [[Greenhouse Growing Guide]]

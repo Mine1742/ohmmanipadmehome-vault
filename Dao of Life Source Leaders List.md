@@ -1,4 +1,4 @@
-﻿#daooflife
+#daooflife
 
 [[Dao of Life Hub]]
 

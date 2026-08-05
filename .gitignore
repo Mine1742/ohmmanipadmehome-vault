@@ -3,4 +3,11 @@
 .trash/
 .claude/settings.local.json
 .claude/scripts/vault-sync.log
-Claude Skills/
+.claude/skills
+
+# Sports Card Scanner (Sports Card Scanner/)
+Sports Card Scanner/backend/.venv
+Sports Card Scanner/backend/__pycache__
+Sports Card Scanner/.env
+Sports Card Scanner/data/images
+Sports Card Scanner/data/cards.db

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sports Card Scanner</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1.1rem; margin-top: 2.5rem; }
+  .dropzone { border: 2px dashed #999; border-radius: 8px; padding: 2rem; text-align: center; margin: 0.5rem 0; cursor: pointer; }
+  .dropzone.drag { border-color: #333; background: #f5f5f5; }
+  .dropzone input { display: none; }
+  .thumbs { display: flex; gap: 1rem; margin-top: 0.5rem; }
+  .thumbs img { max-height: 120px; border-radius: 4px; }
+  button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+  #uploadResult { margin-top: 1rem; }
+  .card-row { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
+  .card-row img { max-height: 150px; margin-right: 1rem; border-radius: 4px; }
+  .field-row { display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0; }
+  .field-row .name { width: 150px; font-weight: 600; }
+  .field-row .conf-low { color: #b00; }
+  .field-row input { flex: 1; padding: 0.25rem; }
+  small.hint { color: #666; }
+</style>
+</head>
+<body>
+
+<h1>Sports Card Scanner</h1>
+<p><small class="hint">Local, self-hosted. Upload front (required) and back (optional) photos of a card.</small></p>
+
+<div class="dropzone" id="dropzoneFront">Drop or click to select FRONT image
+  <input type="file" id="fileFront" accept="image/*">
+</div>
+<div class="dropzone" id="dropzoneBack">Drop or click to select BACK image (optional)
+  <input type="file" id="fileBack" accept="image/*">
+</div>
+<div class="thumbs">
+  <img id="previewFront" style="display:none">
+  <img id="previewBack" style="display:none">
+</div>
+<button id="uploadBtn">Upload &amp; Scan</button>
+<div id="uploadResult"></div>
+
+<h2>Needs Review</h2>
+<div id="reviewList"><small class="hint">Loading…</small></div>
+
+<script>
+const FIELD_NAMES = ["player","team","year","set","card_number","serial_number","parallel_insert_type","notable_flags"];
+const CONF_THRESHOLD = 0.85;
+
+function setupDropzone(zoneId, inputId, previewId) {
+  const zone = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  zone.addEventListener("click", () => input.click());
+  zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("drag"));
+  zone.addEventListener("drop", e => {
+    e.preventDefault();
+    zone.classList.remove("drag");
+    if (e.dataTransfer.files.length) {
+      input.files = e.dataTransfer.files;
+      showPreview();
+    }
+  });
+  input.addEventListener("change", showPreview);
+  function showPreview() {
+    const file = input.files[0];
+    if (!file) return;
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "inline-block";
+  }
+}
+setupDropzone("dropzoneFront", "fileFront", "previewFront");
+setupDropzone("dropzoneBack", "fileBack", "previewBack");
+
+document.getElementById("uploadBtn").addEventListener("click", async () => {
+  const front = document.getElementById("fileFront").files[0];
+  const back = document.getElementById("fileBack").files[0];
+  const resultDiv = document.getElementById("uploadResult");
+  if (!front) { resultDiv.textContent = "Front image is required."; return; }
+
+  const formData = new FormData();
+  formData.append("front", front);
+  if (back) formData.append("back", back);
+
+  resultDiv.textContent = "Uploading…";
+  const res = await fetch("/scan/upload", { method: "POST", body: formData });
+  const data = await res.json();
+  if (!res.ok) { resultDiv.textContent = "Error: " + JSON.stringify(data); return; }
+
+  resultDiv.textContent = "Scanning (job " + data.job_id + ")…";
+  pollResult(data.job_id, resultDiv);
+});
+
+async function pollResult(jobId, resultDiv) {
+  const res = await fetch("/scan/result/" + jobId);
+  const data = await res.json();
+  if (data.status === "processing") {
+    setTimeout(() => pollResult(jobId, resultDiv), 1500);
+    return;
+  }
+  if (data.status === "error") {
+    resultDiv.textContent = "Extraction failed: " + data.error;
+    return;
+  }
+  resultDiv.innerHTML = "<pre>" + JSON.stringify(data.fields, null, 2) + "</pre>";
+  loadReviewList();
+}
+
+async function loadReviewList() {
+  const listDiv = document.getElementById("reviewList");
+  const res = await fetch("/scan/list?needs_review=true");
+  const cards = await res.json();
+  if (!cards.length) { listDiv.innerHTML = "<small class='hint'>Nothing flagged for review.</small>"; return; }
+
+  listDiv.innerHTML = "";
+  for (const card of cards) {
+    const row = document.createElement("div");
+    row.className = "card-row";
+    let html = `<div><strong>${card.job_id}</strong></div>`;
+    for (const name of FIELD_NAMES) {
+      const f = card.fields[name] || { value: "", confidence: 0 };
+      const lowClass = f.confidence < CONF_THRESHOLD ? "conf-low" : "";
+      html += `<div class="field-row">
+        <span class="name ${lowClass}">${name} (${f.confidence.toFixed(2)})</span>
+        <input type="text" value="${(f.value ?? "").replace(/"/g, '&quot;')}" data-field="${name}">
+        <button data-save="${name}" data-job="${card.job_id}">Save</button>
+      </div>`;
+    }
+    row.innerHTML = html;
+    listDiv.appendChild(row);
+  }
+
+  listDiv.querySelectorAll("button[data-save]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const field = btn.getAttribute("data-save");
+      const jobId = btn.getAttribute("data-job");
+      const input = btn.parentElement.querySelector(`input[data-field="${field}"]`);
+      await fetch(`/scan/${jobId}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field, new_value: input.value, reviewer: "owner" }),
+      });
+      loadReviewList();
+    });
+  });
+}
+
+loadReviewList();
+</script>
+
+</body>
+</html>

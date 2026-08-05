@@ -12,7 +12,8 @@
 
 [[HAM Radio Technician]]
 [[Thanksgiving_2025_Proposed_Menu]]
-[[sports_card_scanning_recommendations]]
+
+[[Sports Card Scanning Hub]]
 
 [[Greenhouse]]
 [[Solar Power]]
