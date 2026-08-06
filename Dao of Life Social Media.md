@@ -30,6 +30,17 @@ schedule stays current instead of accumulating stale windows.
   Write respectfully and avoid paternalistic or "voice for" framing — center Indigenous
   self-determination and existing Indigenous-led organizing rather than positioning the
   church as a rescuer.
+- **2026-10-13 → 2026-11-26 (Thanksgiving):** Food insecurity, and how/where to obtain
+  free food and healthy meals — food banks, community fridges, SNAP/WIC and other
+  benefit programs, free/reduced meal programs, the church's own food-distribution acts
+  of service. **Safety note: any specific resource named in a post (food bank name,
+  address, hours, eligibility) must come from real, current research, not invented or
+  assumed** — wrong info here could send someone to a closed location or a program they
+  don't actually qualify for. Delegate that research (food-assistance resources
+  serving the Maryland HQ and Michigan Branch areas specifically, plus general
+  national resources like 211/FindHelp) to the `dao-of-life-growth` agent before
+  drafting, and only name a specific resource in a post once its details are verified
+  from that research.
 
 | Date drafted | Platform(s) | Topic | Status |
 |--------------|-------------|-------|--------|
