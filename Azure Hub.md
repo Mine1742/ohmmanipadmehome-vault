@@ -14,6 +14,8 @@
 
 [[Azure Study Log]]
 
+[[DP-600 Study Guide]]
+
 
 
 

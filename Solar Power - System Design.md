@@ -4,21 +4,23 @@
 
 This is a planning-level electrical design, not a stamped install plan — **a licensed electrician should review and pull any required permit before this gets wired up**, especially the battery, inverter, and grounding work.
 
+**Revision note:** the greenhouse's wall heights and canopy footprint changed after this was first written (see [[Greenhouse Design]] and [[Solar Power - Site Layout]] for the full story) — the single west canopy became two smaller canopies, one on each side. The panel count/wattage target below is unaffected (still 2 panels, ~800W), but the panels are now physically split one-per-canopy (east and west) instead of stacked together on the west side, which affects the wiring run description further down.
+
 Load & Sizing Basis
 
-From [[Solar Power - Concept]]: ~2,050 Wh/day (4 fans, pump, grow+ambient lights, radio, vent actuators — see that note for the per-load breakdown). From [[Solar Power - Site Layout]]: canopy roof is 6' wide x ~9' slope depth (~54 sq ft), fixed tilt ~26.6°, true south, no shading, MD ~4.5 peak sun hours/day.
+From [[Solar Power - Concept]]: ~2,050 Wh/day (4 fans, pump, grow+ambient lights, radio, vent actuators — see that note for the per-load breakdown). From [[Solar Power - Site Layout]]: **two** canopies (west + east), each 6' wide x 6.408' slope depth (~38.4 sq ft each, ~77 sq ft combined), fixed tilt 20.56° (69.44° from the wall), true south, no shading, MD ~4.5 peak sun hours/day.
 
-Panel Array: 2 panels, ~800W — not 3
+Panel Array: 2 panels, ~800W — one per canopy, not stacked
 
-The site layout's "~2-3 panels" estimate was a flat square-footage calculation. Real panel dimensions change that once you actually try to lay them out:
+Earlier versions of this note (and the original site-layout estimate) assumed a single larger 6'x8' canopy holding 2 stacked panels. That canopy was later split into two smaller 6'x6' canopies, one on each side of the greenhouse — this section is updated to match:
 
 - Modern ~400W panels run roughly 44.6" x 67.8" (~19-20 W/sq ft is the 2026 residential median).
-- The canopy's 6' (72") width is the binding constraint, not total area — a panel's long edge (~68") fits across it with a few inches to spare, but there's no room for a second panel *beside* it (2 panels side-by-side would need ~135"+ of width).
-- The fix is orientation: turn the panels so their **long edge runs across the 6' width** and their **short edge (~45") runs up the 9' (108") slope**. Two panels stacked front-to-back down the slope use ~90" of the 108" available depth — comfortably fits, with ~18" left over for mounting rail and edge clearance. A third panel would need ~134" of depth and doesn't fit.
+- Each canopy's usable roof is only 6' (72") wide x 6.408' (~77") of slope depth — too shallow for 2 panels stacked front-to-back in either orientation (that needed ~90"+ of depth on the old 9'-deep canopy; this canopy has less than that available even before subtracting mounting clearance).
+- **Each canopy fits exactly 1 panel**, oriented with its long edge (~68") across the 6' width and its short edge (~45") up the ~77" slope — comfortable fit with room to spare on both dimensions.
 
-**Result: 2 panels x ~400W = ~800W array** — the low end of the original 800W-1,000W target, not the high end. Worth knowing now rather than after panels are bought.
+**Result: 1 panel per canopy x 2 canopies x ~400W = ~800W array total** — same total as before, just physically split east/west instead of stacked on one side. The low end of the original 800W-1,000W target, not the high end. Worth knowing now rather than after panels are bought.
 
-Generation check: 800W x 4.5 sun hrs x ~0.77 system efficiency (MPPT + battery round-trip + inverter losses combined) ≈ **2,772 Wh/day** generation capacity against a ~2,050 Wh/day load — about 35% headroom for cloudy days, panel aging, and the tilt being a few degrees off the theoretical ideal. Healthy margin without oversizing.
+Generation check: 800W x 4.5 sun hrs x ~0.77 system efficiency (MPPT + battery round-trip + inverter losses combined) ≈ **2,772 Wh/day** generation capacity against a ~2,050 Wh/day load — about 35% headroom for cloudy days, panel aging, and the tilt being off the theoretical ~33° ideal. Healthy margin without oversizing.
 
 Charge Controller: MPPT, ~50A
 
@@ -46,14 +48,14 @@ Worth reconsidering once real products are picked: if the fans and pump end up b
 
 Wiring Plan (high level — sizes/models to be confirmed with real product datasheets)
 
-1. **PV array** (2 panels in series) → PV disconnect/combiner with a fuse sized to ~1.56x the string's short-circuit current (Isc) → **MPPT charge controller** (50A)
+1. **PV array** — now 1 panel on the west canopy + 1 panel on the east canopy (2 panels in series overall), with conductor runs from *both* sides of the greenhouse back to a central combiner point rather than one run from a single co-located array — budget more PV cable than the original single-canopy layout assumed, and route each run cleanly along the structure rather than across open ground. From the combiner: PV disconnect with a fuse sized to ~1.56x the string's short-circuit current (Isc) → **MPPT charge controller** (50A)
 2. Charge controller → **battery bank** (24V 200Ah LiFePO4) through a breaker sized to the controller's max output current
 3. Battery bank → **main battery disconnect** → busbar, branching to:
    - **Inverter** (24V DC input), its own DC breaker sized to the inverter's rated input current at low-voltage cutoff
    - **DC-DC converter** (24V→12V) for the pump, its own fuse
    - Individual fused branches for any DC-native loads (e.g. DC fans, if chosen over AC)
 4. **Grounding**: bond the panel racking/frame, charge controller, inverter chassis, and battery enclosure to a common ground rod — this and all final wire gauges are exactly the kind of thing to have an electrician verify, not something to self-certify from this note.
-5. **Disconnects**: accessible PV disconnect and battery disconnect near the array and battery enclosure respectively — good practice for a detached structure even without a formal rapid-shutdown code requirement (that mostly targets grid-tied systems).
+5. **Disconnects & rapid shutdown**: accessible PV disconnect and battery disconnect near the array and battery enclosure. **Correction from the original version of this note:** rapid shutdown is not just a grid-tied concern here — Prince George's County's own DPIE rooftop PV permitting guidelines list rapid-shutdown provisions and a PV disconnecting means as standard requirements for the application regardless of grid-tie status (see [[Greenhouse Design]] permitting note). With two physically separate arrays (east and west canopy), this likely means a rapid-shutdown-capable disconnect at *each* array, not just one central point — confirm the specific requirement with the electrician and the county's application guidelines before finalizing.
 
 Assumptions Used
 

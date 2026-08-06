@@ -44,5 +44,6 @@ Catalog of Claude Code skills you've built, across all projects. Add a row whene
 | gardening-financial-auditor   | Ohmmanipadmehome (this vault) | Ongoing ledger of garden spend vs estimated harvest value in Gardening - Cost Log.md                                                    | Active |
 | gardening-planting-calendar   | Ohmmanipadmehome (this vault) | Manage a per-crop seed/transplant/harvest calendar based on location frost dates in Gardening - Planting Calendar.md                    | Active |
 | life-personal-hub-review      | Ohmmanipadmehome (this vault) | Review everything linked under Personal Hub and append a recommendations-focused entry to Life Dashboard; scheduled weekly              | Active |
+| job-search-resume-tailor      | Ohmmanipadmehome (this vault) | Generate a tailored resume and cover letter from a master resume + target job description, filed under Job Search Hub                   | Active |
 
 See [[Skill Template]] for the starting format.

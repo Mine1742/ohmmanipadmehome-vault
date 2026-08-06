@@ -2,20 +2,24 @@
 
 [[Greenhouse]] | [[Solar Power - Concept]]
 
-Footprint & Dimensions
+Footprint & Dimensions (revised)
 
-- Greenhouse: 12' x 8' (96 sq ft footprint)
-- Solar structure: 6' x 8' (48 sq ft footprint), attached to the west side — an **unenclosed lean-to canopy** matching the greenhouse's own roofline and wall heights (see Orientation below), not a separate flat pad. No walls, no glazing — just the open frame, with panels mounted on its roof.
+- Greenhouse: 12' x 8' (96 sq ft footprint) — unchanged
+- **West solar canopy: 6' (east–west) x 6' (north–south)** — 36 sq ft footprint, anchored at the north wall, running only 6' of the greenhouse's 8' depth (not the full depth as originally planned)
+- **East solar canopy: 6' x 6'** — mirrors the west canopy exactly, same footprint, same anchoring at the north wall
+- Both are **unenclosed lean-to canopies** matching the greenhouse's roofline (see Orientation below) — no walls, no glazing, just open frame with panels mounted on the roof
+- **Combined footprint: 96 + 36 + 36 = 168 sq ft**
 - Freestanding — no wall to attach to, full freedom on orientation
 
-Orientation
+Orientation (revised — wall heights changed)
 
 - Long axis (the 12' dimension) runs east–west, ridge-to-eave depth is the 8' dimension running north–south.
-- **Roof style: south-facing lean-to (shed roof), freestanding** — back (north) wall at 12' height, front (south) wall at 8' height. Single slope, facing south.
-  - Computed pitch: (12' − 8') rise over the 8' north–south depth = 4:8 → **~6:12 pitch (~26.6°)**, a normal, buildable roof angle — not extreme.
-  - A tall back wall + steep south-facing slope is a good pairing for season-extension use: the slope catches more direct sun at MD's lower spring/fall sun angles than a shallow roof would, and the tall north wall gives headroom and a warm-air buffer at the back of the space.
-  - Note: 8'–12' wall heights are tall for a 12'x8' footprint (most small hobby greenhouses run 6'–8' eave height) — more glazing area, more wind exposure to brace for, and a ladder/lift needed to work the top of the north wall during build. Confirmed intentional by the user.
-- The 6'x8' solar structure to the west continues this same roofline and wall heights rather than standing separately — it's an unenclosed lean-to canopy sharing the greenhouse's roof plane, with panels mounted directly on its roof. Because it shares the same plane, the greenhouse doesn't shade its own canopy — see [[Solar Power - Site Layout]] for the full shading analysis.
+- **Roof style: south-facing lean-to (shed roof), freestanding** — back (north) wall now **9'** (down from 12'), front (south) wall now **6'** (down from 8'). Single slope, facing south.
+  - Computed pitch: (9' − 6') rise over the 8' north–south depth = 3:8 → **~4.5:12 pitch (20.56° from horizontal, precisely)** — shallower than the original ~26.6°, but still a real slope, not the near-flat ~7° that keeping the south wall at 8' would have given. This was a deliberate compromise between the two, chosen by the user.
+  - Equivalently, the angle between the (vertical) north wall and the roof surface is **69.44°** (90° − 20.56°) — same geometry, just measured from the wall instead of from horizontal. Confirmed consistent by the user's own calculation.
+  - This lower profile is easier to build and less wind-exposed than the original 8'–12' version, at the cost of a somewhat less aggressive sun angle on the roof glazing.
+- **Both canopies share this exact roofline** — but since each only extends 6' of the 8' total depth (not the full run), each canopy's south-facing edge sits partway up the slope, not at the greenhouse's actual south wall height. At 6' of the 8' depth: height = 9' − (6/8)×(9'−6') = 9' − 2.25' = **6.75' at each canopy's south edge**. So each canopy's posts run 9' (north) down to 6.75' (south edge of canopy, 2' short of the greenhouse's own south wall).
+- Because both canopies share the same continuous roof plane as the greenhouse, the greenhouse doesn't shade either one — see [[Solar Power - Site Layout]] for the full (now-updated) shading analysis, which applies symmetrically to both sides.
 
 Primary Use
 
@@ -26,9 +30,9 @@ Structure Options
 Roof style is now settled (south-facing lean-to/shed roof, 12' back wall / 8' front wall — see Orientation above). Options below are framing/glazing variants on that same shed-roof shape, not alternate roof styles.
 
 **Option A — Wood-frame shed-roof, single-wall polycarbonate glazing (recommended)**
-- Pressure-treated or cedar wood framing gives solid, flat mounting surfaces for the 4 circulation fans, louvered vent doors, and light fixtures — much easier to fasten hardware to than round steel tubing, and needed anyway to frame the taller 12' north wall and rafters at a clean ~6:12 pitch.
+- Pressure-treated or cedar wood framing gives solid, flat mounting surfaces for the 4 circulation fans, louvered vent doors, and light fixtures — much easier to fasten hardware to than round steel tubing, and needed anyway to frame the 9' north wall and rafters at the ~4.5:12 pitch.
 - Single-wall polycarbonate (cheaper than twin-wall, still far more impact/wind/hail resistant than film, 10+ year lifespan) is well-matched to season-extension use, where twin-wall's extra insulation would mostly go to waste.
-- The tall 12' north wall is the more material- and labor-intensive part of this build regardless of framing choice — budget extra bracing there for wind load.
+- The 9' north wall is still the tallest, most wind-exposed part of the build — budget bracing there, though the load is more moderate now than the original 12' version.
 
 **Option B — Galvanized steel-frame shed structure, 6-mil UV-treated poly film**
 - Cheapest option upfront and the fastest build for the framing itself.
@@ -42,19 +46,19 @@ Roof style is now settled (south-facing lean-to/shed roof, 12' back wall / 8' fr
 
 North Wall: Solid/Insulated (confirmed)
 
-The 12' north (back) wall will be solid/insulated rather than glazed — standard practice for a lean-to greenhouse. A solid, light-colored or reflective north wall bounces light back onto the plants and blocks cold northern exposure, while the south roof slope and front wall do the light-gathering. This is also the tallest, most wind-exposed wall, so less glazing there is a practical win too.
+The 9' north (back) wall will be solid/insulated rather than glazed — standard practice for a lean-to greenhouse. A solid, light-colored or reflective north wall bounces light back onto the plants and blocks cold northern exposure, while the south roof slope and front wall do the light-gathering.
 
-Envelope / Glazing Estimate (rough, pre-door/vent-opening deductions)
+Envelope / Glazing Estimate (revised for 9'/6' wall heights, rough, pre-door/vent-opening deductions)
 
 | Surface | Dimensions | Area | Glazed? |
 |---|---|---|---|
-| North wall | 12' long x 12' tall | 144 sq ft | No — solid/insulated |
-| South (front) wall | 12' long x 8' tall | 96 sq ft | Yes |
-| East end wall | trapezoid, avg height 10' x 8' depth | 80 sq ft | Yes |
-| West end wall | trapezoid, avg height 10' x 8' depth | 80 sq ft | Yes (canopy attaches to the outside of this wall) |
-| Roof | ~9' slope length x 12' long | ~107 sq ft | Yes |
+| North wall | 12' long x 9' tall | 108 sq ft | No — solid/insulated |
+| South (front) wall | 12' long x 6' tall | 72 sq ft | Yes |
+| East end wall | trapezoid, avg height 7.5' x 8' depth | 60 sq ft | Yes (east canopy attaches to the outside of this wall) |
+| West end wall | trapezoid, avg height 7.5' x 8' depth | 60 sq ft | Yes (west canopy attaches to the outside of this wall) |
+| Roof | ~8.55' slope length x 12' long | ~103 sq ft | Yes |
 
-**~363 sq ft of glazing, ~144 sq ft of solid wall.** Actual glazing need will be a bit lower once door and vent openings are subtracted — close enough for a materials ballpark now, to be firmed up with greenhouse-price-optimizer.
+**~295 sq ft of glazing, ~108 sq ft of solid wall.** Both went down from the original 12'/8' version since the whole structure is shorter now. Actual glazing need will be a bit lower once door and vent openings are subtracted.
 
 Materials Shortlist
 
@@ -67,18 +71,32 @@ Materials Shortlist
 - 6-mil UV-treated poly film: cheapest upfront, ~4-year UV warranty/lifespan before replacement, tears more easily, minimal insulation value — viable if minimizing upfront cost matters more than longevity.
 - Twin-wall polycarbonate: not recommended here — its insulation advantage mainly pays off for year-round/winter growing, which is out of scope for this greenhouse.
 
-Permitting Note (Maryland — general, not county-specific)
+Permitting Note — Prince George's County, MD (Camp Springs) — confirmed county, real numbers
 
-- Many MD counties require a building permit for accessory structures at/above ~200 sq ft — this build (96 sq ft greenhouse + 48 sq ft canopy = 144 sq ft combined footprint) likely falls under that threshold in several counties, but this varies enough by jurisdiction that it's worth a direct check rather than assuming.
-- Setback requirements from property lines are common even for small accessory structures (commonly in the 2.5'–5' range for small structures, per Baltimore/Calvert County examples) and apply regardless of the size threshold.
-- Since the solar canopy is roof-mounted on a permitted accessory structure rather than a standalone ground array, it likely doesn't trigger the separate ground-mount-solar zoning review some counties apply — but this is worth confirming with your specific county's permitting office, since the combined structure is unusual enough that it may not fit a standard category cleanly.
+The build location is now confirmed as Camp Springs, Prince George's County, MD. This replaces the earlier general-Maryland placeholder guidance with the actual county rule:
+
+- **A shed/accessory structure under 150 sq ft can go up without a permit in Prince George's County; at or above 150 sq ft, a building permit AND a permanent foundation are required.**
+- **This build is 168 sq ft combined (96 greenhouse + 36 west canopy + 36 east canopy) — over the threshold. A building permit is required**, not optional or borderline like the earlier general-MD estimate suggested.
+- The concrete pier footings already planned in [[Solar Power - Site Layout]] should satisfy the "permanent foundation" requirement, but confirm that directly with the county rather than assuming — "permanent foundation" can mean different things depending on the reviewer.
+- Applications go through the county's Momentum online portal (Case Type: Building Alteration, Permit Type: Residential Exterior and Grading, per their shed-permit category — confirm a greenhouse+solar combination is filed the same way). Signed/sealed architectural drawings are **not** required for a structure at this scale.
+- **Rooftop solar PV needs its own permit layer on top of the building permit** — Prince George's County DPIE has published guidelines specifically for rooftop PV systems, requiring: a basic site plan showing major system components, rapid-shutdown provisions, a photovoltaic disconnecting means, and grounding/array-mounting details in the application. This applies to the solar canopies even though they're not on the primary dwelling.
+- Prince George's County was an early adopter of Maryland's **SolarAPP+ automated instant-permitting program** (state grant awarded 2025) — but confirmed via the county's own SolarAPP+ page that it **requires a Maryland-licensed contractor** to apply (contractor license upload is part of registration). It's not available for a self-installed DIY system, so this only becomes relevant if a licensed solar contractor gets involved; otherwise expect the standard manual rooftop PV review.
+- **Real fee numbers — from the actual DPIE fee schedule (user supplied the PDF, effective March 2, 2025), with an open classification question:**
+  - Whether the two solar canopies' footprint counts toward the *Shed* permit's per-square-foot fee, or whether they're covered entirely by the separate solar-specific permits (since they're unenclosed structures that exist only to hold panels), changes the total by ~$350.
+  - **If canopy sq ft counts** (168 sq ft total): Shed permit $352.62 + Solar building permit $251.90 + Solar electrical permit $177.10 + general electrical ~$100–$165 = **~$880–$945**
+  - **If it doesn't** (only the 96 sq ft enclosed greenhouse counts, which is under the county's 150 sq ft no-permit threshold): no Shed permit owed at all, just the two solar permits + general electrical = **~$530–$595**
+  - This is worth resolving with a direct DPIE call (301-883-5776) rather than assuming either way — full breakdown and reasoning in [[Greenhouse Cost Estimate]].
+  - **Inspections are confirmed required, not just the permit/fee**: the county's Sheds page states a final inspection is mandatory (plus inspections every 6 months if the build runs that long) — call 301-755-9000 to schedule. Standard rough-in/final electrical inspections are also expected for the electrical permits.
+- Contractors doing home-improvement work here need to be MHIC-licensed (Maryland Home Improvement Commission) — relevant if any part of this gets contracted out rather than fully DIY.
+
+**This corrects [[Solar Power - System Design]]'s earlier note that rapid shutdown "mostly targets grid-tied systems"** — Prince George's County's own rooftop PV guidelines list it as a standard requirement regardless of grid-tie status. Flagged there too.
 
 Open Questions
 
 - ~~Confirm which structure option~~ — resolved: Option A (wood-frame, single-wall polycarbonate) adopted
-- ~~Shading on the west-side solar structure~~ — resolved: confirmed clear, open sky, no nearby obstructions
+- ~~Shading on the solar structures~~ — resolved: confirmed clear, open sky, no nearby obstructions (applies to both canopies now — see [[Solar Power - Site Layout]])
 - ~~Exact glazing square footage~~ — resolved above (rough estimate; refine once door/vent openings are placed)
-- County-specific permitting requirements — general MD guidance gathered above, but needs a direct check with your county's permitting office before building
+- ~~County-specific permitting requirements~~ — resolved above with real Prince George's County rules; still worth a direct call to DPIE to confirm the "permanent foundation" and SolarAPP+ eligibility questions
 
 Next Steps
 
@@ -87,9 +105,11 @@ Next Steps
 - **greenhouse-instructor** for a growing/operations plan once built
 
 Sources (permitting):
-- [Article 19: Accessory Structures and Uses - Zoning Ordinance, Calvert County, MD](https://ecode360.com/46250317Z)
-- [Residential Accessory Structure Permit | Baltimore County Government](https://www.baltimorecountymd.gov/departments/pai/application/accessory-structure)
-- [Solar Permit in Maryland: 2026 Requirements & Process](https://www.solarpermitsolutions.com/blog/solar-permit-maryland)
+- [Sheds | Prince George's County](https://www.princegeorgescountymd.gov/departments-offices/permitting-inspections-and-enforcement/permits/residential-building/sheds)
+- [What work is exempt from obtaining a permit? | Prince George's County](https://www.princegeorgescountymd.gov/faq/structural-section-permitting-inspections-and-enforcement/what-work-exempt-obtaining-permit)
+- [DPIE Guidelines for Permitting Rooftop PV Solar Array Systems](https://www.princegeorgescountymd.gov/sites/default/files/DPIE-Guidelines-for-Permitting-Rooftop-PV-Solar-Array-Systems-PDF.pdf)
+- [SolarAPP+ | Prince George's County](https://www.princegeorgescountymd.gov/departments-offices/permitting-inspections-and-enforcement/permits/solar-automated-permit-processing-plus-solarapp)
+- [Date Change: New DPIE Fees Start March 2 | Prince George's County](https://www.princegeorgescountymd.gov/departments-offices/news-events/news/date-change-new-dpie-fees-start-march-2)
 
 Sources (glazing cost/durability comparison):
 - [Best Plastic for Greenhouse 2026: PE Film vs Polycarbonate](https://plastic-film.cn/best-plastic-for-greenhouse/)
