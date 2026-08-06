@@ -9,6 +9,7 @@ inlined below if short), with a status: drafted / scheduled / posted.
 |--------------|-------------|-------|--------|
 | 2026-07-31 | Instagram | Harvest Ritual (Sep 20, 2026) | Drafted |
 | 2026-08-03 | Instagram, Facebook | Regular Congregational Service (Sun Aug 16, 2026) | Drafted |
+| 2026-08-06 | Instagram, Facebook | Core philosophy — Labor Day / worker solidarity | Drafted |
 
 ## Drafts
 
@@ -39,3 +40,17 @@ All are welcome • Bring a friend • Join us in comradery and solidarity
 📍 Dao of Life, Maryland HQ
 
 #DaoOfLife #Solidarity #MutualAid #Community #Meditation
+
+### Core Philosophy — Labor Day / Worker Solidarity — Instagram/Facebook — 2026-08-06
+
+✊ As Labor Day approaches, we remember whose hands built the world we share.
+
+At the Dao of Life, worker solidarity isn't a once-a-year observance — it's woven into our creed and our daily practice. This Labor Day, we're holding space for the people who feed us, build our homes, and clothe our communities, often without enough recognition or reward.
+
+"We stand in solidarity with workers, honoring the hands that feed, build, and clothe us." — The Dao of Life Creed
+
+However you spend the holiday, we invite you to pause and give thanks to a worker in your life — and to join us as we continue living this value through service, not just words.
+
+All are welcome • Bring a friend • Join us in comradery and solidarity
+
+#DaoOfLife #LaborDay #WorkerSolidarity #MutualAid #Community
