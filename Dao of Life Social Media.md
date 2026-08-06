@@ -41,6 +41,16 @@ schedule stays current instead of accumulating stale windows.
   national resources like 211/FindHelp) to the `dao-of-life-growth` agent before
   drafting, and only name a specific resource in a post once its details are verified
   from that research.
+- **2026-11-27 → 2027-01-01 (New Year's Day):** Anti-consumerism — breaking cycles of
+  mindless spending/consumption, alternatives to Black Friday/Cyber Monday materialism,
+  gratitude and sufficiency over accumulation, gift-giving that isn't purely
+  transactional (handmade, experiences, mutual aid, secondhand). Ground this in the
+  Creed's "care for the Earth, committed to sustainability and balance" line and the
+  labor/anti-capitalist strain of the source-leaders list (Goldman, Debs, Chomsky,
+  Rage Against the Machine) rather than generic minimalism-influencer framing — this is
+  a solidarity/sustainability critique, not a lifestyle-brand one. Note Black Friday
+  (2026-11-27) and Giving Tuesday (2026-12-01) both fall in this window — good natural
+  pegs for a "redirect the spending impulse into mutual aid/giving instead" post.
 
 | Date drafted | Platform(s) | Topic | Status |
 |--------------|-------------|-------|--------|
