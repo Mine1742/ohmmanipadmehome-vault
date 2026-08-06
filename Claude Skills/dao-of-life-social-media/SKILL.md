@@ -22,12 +22,25 @@ description: >
    YouTube/TikTok). If no platform is specified, ask which one(s), or default to a
    single adaptable draft the user can resize themselves.
 
-4. For broader growth/engagement *strategy* (not just drafting one post) — audience
+   **Always produce two versions, since drafts get cross-posted:** a longer
+   Instagram/Facebook version (as before), *and* a Bluesky/X-compliant short version
+   capped at 300 characters (Bluesky's hard limit; also safe for X's 280) — count
+   characters and verify it fits, don't estimate. The short version should keep the
+   emoji hook, one Creed line or paraphrase, and the core invite/hashtags, cut down to
+   fit — not just the first 300 characters of the long version truncated mid-sentence.
+
+4. In unattended/scheduled runs (no one available to answer "which platform(s)"),
+   default to drafting both the Instagram/Facebook version and the Bluesky-compliant
+   short version per (3) rather than asking.
+
+5. For broader growth/engagement *strategy* (not just drafting one post) — audience
    growth tactics, posting cadence, what's working on which platform — delegate to the
    `dao-of-life-growth` agent instead of guessing at marketing strategy.
 
-5. Save drafts by appending to [[Dao of Life Social Media]] (create it if it doesn't
+6. Save drafts by appending to [[Dao of Life Social Media]] (create it if it doesn't
    exist, as an index note listing drafts with a status: drafted / scheduled / posted).
+   When a post has both a long and short version, label each clearly (e.g. "Instagram/
+   Facebook" vs. "Bluesky/X") so it's obvious which is which.
 
-6. Never read, write, or reference actual account credentials or the socials spreadsheet
+7. Never read, write, or reference actual account credentials or the socials spreadsheet
    in Drive — this skill only produces text content.
