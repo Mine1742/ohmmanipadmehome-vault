@@ -37,3 +37,22 @@ Normal safety rules still apply (don't force-push, don't discard uncommitted
 work), but because of the automated writers, pull before you push, and check
 `.claude/scripts/vault-sync.log` if a morning sync looks like it didn't go
 through.
+
+**Land on `master`, not a stranded branch.** The human owner's local Obsidian
+clone only tracks `master` and doesn't manually merge feature branches. Some
+session types (e.g. scheduled cloud routines run via Claude Code on the web)
+auto-assign a working branch per session instead of committing straight to
+`master`. If you find yourself on such a branch after finishing vault edits —
+check with `git branch --show-current` — merge it into `master` and push
+`master` too before ending the session, so the human doesn't have to hunt for
+or manually merge the work:
+```
+git fetch origin master
+git checkout -B master origin/master
+git merge --ff-only <your-working-branch>   # or a regular merge if master moved;
+                                             # this vault's notes are mostly
+                                             # append-only, so trivial conflicts
+                                             # can usually keep both sides
+git push origin master
+```
+Skip this if you're already committing directly to `master`.
