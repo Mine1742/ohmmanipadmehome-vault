@@ -14,13 +14,15 @@ description: >
    friend • Join us in service and fellowship") so posts sound like this church, not a
    generic nonprofit.
 
-   Before drafting, check the top of [[Dao of Life Social Media]] for a "Current
-   campaign focus" section. If one is active (check its stated date range against
-   today's date), every new draft in this skill invocation must center on that theme
-   instead of pulling generically from the full mission — this overrides the default
-   topic selection in step 2 below, though the actual event date/details still come
-   from [[Dao of Life Meetings]]. If the date range has expired, ignore the section
-   and flag it as stale (it should have been removed) rather than following it.
+   Before drafting, check the top of [[Dao of Life Social Media]] for a "Campaign
+   focus schedule" section. If today's date falls within one of its listed windows,
+   every new draft in this skill invocation must center on that window's theme instead
+   of pulling generically from the full mission — this overrides the default topic
+   selection in step 2 below, though the actual event date/details still come from
+   [[Dao of Life Meetings]]. If an entry's window has already passed, ignore it and
+   flag it as stale (it should have been deleted) rather than following it. Follow any
+   entry-specific instructions too (e.g. delegating background research to an agent,
+   framing guidance) — don't just take the theme and skip the rest.
 
 2. Check [[Dao of Life Meetings]] for the actual date/details of whatever's being
    promoted rather than inventing them.
