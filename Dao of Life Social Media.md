@@ -5,6 +5,16 @@
 Index of drafted social media posts. Each entry links to where the draft lives (or is
 inlined below if short), with a status: drafted / scheduled / posted.
 
+## Current campaign focus
+**Active 2026-08-06 through Labor Day (Monday, 2026-09-07).** All new post drafts in
+this window — whether for a scheduled service/ritual or a philosophy/current-events
+post — should center on **worker solidarity and building a healthy, happy working
+class**: fair labor, dignity of work, rest/work-life balance, mutual aid among
+workers, honoring the people who feed/build/clothe us. Skip drafting on other pillars
+(climate, gardening, hunger relief, etc.) during this window unless a specific
+already-scheduled service requires it. **Remove this section once Labor Day has
+passed** so future cycles return to covering the full range of pillars.
+
 | Date drafted | Platform(s) | Topic | Status |
 |--------------|-------------|-------|--------|
 | 2026-07-31 | Instagram | Harvest Ritual (Sep 20, 2026) | Drafted |
