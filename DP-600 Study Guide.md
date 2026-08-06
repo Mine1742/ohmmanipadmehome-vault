@@ -10,9 +10,11 @@
 2. [Where You Already Stand](#where-you-already-stand)
 3. [Study Timeline](#study-timeline)
 4. [Skills Measured Breakdown](#skills-measured-breakdown)
-5. [Study Resources](#study-resources)
-6. [Hands-On Lab Plan](#hands-on-lab-plan)
-7. [Exam Day Logistics](#exam-day-logistics)
+5. [KQL for Fabric](#kql-for-fabric)
+6. [DAX for Semantic Models](#dax-for-semantic-models)
+7. [Study Resources](#study-resources)
+8. [Hands-On Lab Plan](#hands-on-lab-plan)
+9. [Exam Day Logistics](#exam-day-logistics)
 
 ---
 
@@ -128,6 +130,141 @@ Given the existing SQL/Power BI/Python base, this is closer to an **8-week** pla
 
 ---
 
+## KQL for Fabric
+
+This is the one query language with zero prior exposure (see [Where You Already Stand](#where-you-already-stand)), so it gets its own section instead of getting buried under "Query and analyze data." General syntax reference: [[kql_cheat_sheet]] — that note was written against Log Analytics/Sentinel tables (`SecurityEvent`, `TimeGenerated`); the language is the same in Fabric, only the surrounding item types differ.
+
+### Where KQL lives in Fabric
+
+- **Eventhouse** — the Fabric item that hosts one or more **KQL databases**, built for high-volume, timestamped/streaming data (IoT telemetry, logs, clickstreams). This is Fabric's Real-Time Intelligence workload.
+- **KQL Database** — a database inside an Eventhouse; tables here are queried with KQL (not SQL/T-SQL).
+- **KQL Queryset** — the saved-query item you write and run KQL in, similar in role to a SQL script item against a Warehouse.
+- Every KQL database also exposes a **read-only SQL-queryable endpoint** (subset of T-SQL) for tools that can't speak KQL — know that this exists, don't expect to write KQL through it.
+- **OneLake availability** — KQL database tables can be made available in OneLake, landing as Parquet/Delta so Lakehouse/Warehouse items and Direct Lake semantic models can read Eventhouse data without a separate copy step. This is the "Implement OneLake integration for Eventhouse" bullet under Get Data.
+
+### Getting data in
+
+- **Real-Time hub** — the discovery/subscription surface for streaming sources (Fabric events, Azure Event Hubs, IoT Hub, sample data) — this is what "Discover data via OneLake catalog and Real-Time hub" is testing.
+- Ingestion into a KQL database happens via **update policies** (transform-on-ingest, similar concept to a trigger) or direct ingestion from a pipeline/eventstream.
+- **Materialized views** pre-aggregate KQL data for faster repeat queries — conceptually parallel to an aggregated Gold table in a Lakehouse.
+
+### Syntax patterns worth knowing cold for the exam
+
+Beyond the basics in [[kql_cheat_sheet]] (`where`, `project`, `summarize`, `extend`, `join`, `render`), Fabric-context questions tend to lean on:
+
+```kql
+// Time-windowed aggregation — the single most common exam pattern
+Table
+| where Timestamp > ago(7d)
+| summarize EventCount = count() by bin(Timestamp, 1h), DeviceId
+| order by Timestamp asc
+```
+
+```kql
+// Cross-database / cross-Eventhouse query
+database("OtherKqlDatabase").TableName
+| where Timestamp > ago(1d)
+```
+
+```kql
+// let for readability and reuse within a queryset
+let threshold = 100;
+Table
+| where Value > threshold
+| project Timestamp, DeviceId, Value
+```
+
+- `bin()` for time-bucketing is everywhere in real-time dashboards — expect it paired with `summarize` and `render timechart`.
+- Know the **difference between `summarize` (KQL) and `GROUP BY` (SQL)** conceptually — same idea, different keyword, and the exam mixes SQL/KQL/DAX questions back-to-back so it's easy to reach for the wrong syntax under time pressure.
+- `mv-expand` (flatten arrays/JSON) shows up for IoT/telemetry payloads with nested fields — a case row-based SQL handles clumsily but KQL treats as a first-class operator.
+
+### Practice plan
+
+Matches the Hands-On Lab Plan below: stand up a sample Eventhouse (Fabric's built-in sample real-time data works, no external source needed), then run through filtering, time-bucketed `summarize`, a cross-database query, and one `render timechart` — that combination covers most of what "Query and analyze data by using KQL" is actually testing.
+
+---
+
+## DAX for Semantic Models
+
+Not zero-exposure like KQL — basic Power BI report DAX is already familiar from Just AJs Foods (see [Where You Already Stand](#where-you-already-stand)) — but the exam goes deeper into semantic-model-level DAX than most report authors ever touch: calculation groups, dynamic format strings, field parameters, and windowing functions. This section covers that gap, not the basics.
+
+### Calculated column vs. measure — the distinction the exam leans on
+
+- **Calculated column** — evaluated **row by row** at data refresh time, stored in the model like any other column, consumes memory. Use when the result needs to be a filter/slicer or a relationship key.
+- **Measure** — evaluated **at query time**, in the context of whatever filters (slicers, rows, columns) are currently applied. Nothing is stored; it recalculates on every interaction. Almost everything in a real report should be a measure, not a calculated column — the exam tests knowing why (memory cost, and calculated columns can't react to visual-level filtering the way measures do).
+
+### Filter context and CALCULATE
+
+The concept the rest of DAX hangs off of:
+
+- **Row context** — exists inside iterators and calculated columns; DAX evaluates one row at a time.
+- **Filter context** — the set of filters currently in effect (from slicers, visual axes, or explicit `CALCULATE` modifiers) when a measure is evaluated.
+- **`CALCULATE`** — the one function that can change filter context. Almost every non-trivial measure wraps `CALCULATE`.
+
+```dax
+Total Sales YTD =
+CALCULATE(
+    [Total Sales],
+    DATESYTD('Date'[Date])
+)
+
+-- REMOVEFILTERS / ALL to ignore existing filters
+Total Sales (All Products) =
+CALCULATE(
+    [Total Sales],
+    REMOVEFILTERS('Product')
+)
+```
+
+### Iterators (the `X` functions)
+
+Row-by-row evaluation over a table, then aggregated — this is where "windowing functions" from the skills outline live:
+
+```dax
+Total Profit =
+SUMX(
+    Sales,
+    Sales[Quantity] * (Sales[UnitPrice] - Sales[UnitCost])
+)
+```
+
+`SUMX`, `AVERAGEX`, `MAXX`, `MINX`, `RANKX` — know that these exist because the row-level math (like `Quantity * Price`) can't be done as a simple column aggregate; the calculation depends on multiple columns per row.
+
+### Time intelligence
+
+Built on `CALCULATE` + a date-filtering function, and requires a proper marked **Date table** in the model:
+
+```dax
+Sales PY = CALCULATE([Total Sales], SAMEPERIODLASTYEAR('Date'[Date]))
+Sales YTD = CALCULATE([Total Sales], DATESYTD('Date'[Date]))
+Sales MTD = CALCULATE([Total Sales], DATESMTD('Date'[Date]))
+```
+
+### Calculation groups
+
+Solve the "one measure × many time-intelligence variants" explosion (Sales, Sales PY, Sales YTD, Sales % Change... × every base measure) by defining the transformation once and applying it to whichever measure is in context:
+
+```dax
+CALCULATE(SELECTEDMEASURE(), PARENTHIERARCHY[Level] = "PY")
+-- roughly: "whatever measure the user picked, apply the PY calculation to it"
+```
+
+A calculation group has **calculation items** (PY, YTD, % Change, etc.); the model then only needs one base measure per fact instead of one per fact × time variant. This is a semantic-model-authoring concept, not something typical Power BI report building touches — treat it as new territory even though it's "just DAX."
+
+### Dynamic format strings
+
+Lets a measure's display format (currency, percent, decimals) change based on the calculation item or slicer selection currently applied — e.g. a measure showing `$1,234` normally but `12.3%` when a "% Change" calculation item is selected. Configured as an expression on the measure/calculation item rather than a static format string.
+
+### Field parameters
+
+A table-valued parameter that lets a report user pick *which field(s)* to visualize from a slicer, rather than the report author hard-coding one field per visual (e.g. a slicer that swaps a chart's axis between Region, Product, and Salesperson). Built from `{ }` field-parameter syntax, generated via the Power BI Desktop "Field parameters" feature, then referenced like any other field.
+
+### Practice plan
+
+Build one semantic model (the Vir-Gin recreation from the Hands-On Lab Plan is a good host) with: a proper Date table and one time-intelligence measure, one iterator measure, one calculation group with at least PY/YTD/% Change items, and one field parameter driving a chart axis. That combination hits every DAX bullet under "Implement and manage semantic models" at once.
+
+---
+
 ## Study Resources
 
 | Resource | Link |
@@ -152,8 +289,6 @@ Fabric has a free trial capacity tied to a Power BI account — no employer sign
 2. **Practice KQL** against a sample Eventhouse (Fabric's real-time analytics sample data works fine) since this is the one query language with zero prior exposure.
 3. **Build one semantic model with calculation groups and a field parameter**, then deliberately misconfigure Direct Lake fallback behavior once to see what triggers it — the exam tests understanding of *why* fallback happens, not just the happy path.
 4. **Set up a deployment pipeline** (Dev → Test → Prod) for the practice workspace and configure workspace/item-level security — the "Maintain" domain is easy to under-practice since it's not flashy, but it's 25-30% of the exam.
-
-Once any of this is real (even a small version), report back — `Resume - Master.md` and the CAFB application materials get updated with genuine, specific language at that point, not before.
 
 ---
 

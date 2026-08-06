@@ -1,4 +1,4 @@
-#networking [[Networking]]
+#networking [[Networking Hub]]
 # 📘 Software-Defined Networking (SDN) – Full Tutorial
 
 ## 🧭 Overview

@@ -9,7 +9,7 @@ Vault entry point — start here.
 - [[Accounts Hub]]
 - [[Authentication Hub]]
 - [[Hardware]]
-- [[Networking]]
+- [[Networking Hub]]
 - [[Security]]
 - [[System]]
 - [[Passwords]]
@@ -42,6 +42,7 @@ Vault entry point — start here.
 - [[API Hub]]
 - [[Database Hub]]
 - [[Docker Hub]]
+- [[Data Analytics Hub]]
 
 ## Development, Scripting & AI
 - [[DevOps Hub]]

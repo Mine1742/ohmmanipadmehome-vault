@@ -8,7 +8,7 @@ Sub Directories:
 [[Account Management]]
 [[Hardware]]
 [[Software]]	
-[[Networking]]
+[[Networking Hub]]
 [[O365]]
 [[Entra]]
 [[Passwords]]

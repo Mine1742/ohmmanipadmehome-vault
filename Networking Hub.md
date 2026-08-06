@@ -1,6 +1,7 @@
 #network 
 
 [[DNS not resolving]]
+[[Identifying Device Type on a Network]]
 [[VM Provisioning]]
 [[Networked drive connection]]
 [[VPN Config]]

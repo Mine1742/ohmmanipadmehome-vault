@@ -8,7 +8,11 @@
 [[Stream of concious]]
 [[Automations]]
 [[App Ideas]]
+
+
 [[Skills to learn]]
+[[Data Analytics Hub]]
+
 
 [[HAM Radio Technician]]
 [[Thanksgiving_2025_Proposed_Menu]]

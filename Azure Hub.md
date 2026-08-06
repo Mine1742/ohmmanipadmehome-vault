@@ -15,6 +15,7 @@
 [[Azure Study Log]]
 
 [[DP-600 Study Guide]]
+[[Data Analytics Hub]]
 
 
 

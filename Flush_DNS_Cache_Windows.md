@@ -1,4 +1,4 @@
-[[Networking]][[DNS not resolving]]
+[[Networking Hub]][[DNS not resolving]]
 # How to Flush DNS Cache on Windows
 
 ## Steps

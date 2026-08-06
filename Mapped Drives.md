@@ -1,4 +1,4 @@
-[[Hardware]] [[Networking]] [[Software]]
+[[Hardware]] [[Networking Hub]] [[Software]]
 All mapped drives should be set up using FQDN 
 
 Z drive is the egnite drive and needs support form sprig onsite
