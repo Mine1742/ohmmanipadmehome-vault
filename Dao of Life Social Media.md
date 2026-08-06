@@ -75,6 +75,8 @@ All are welcome • Bring a friend • Join us in comradery and solidarity
 
 #DaoOfLife #HarvestRitual #Solidarity #MutualAid #CommunityGarden
 
+📅 Suggested post time: Instagram — Tue–Thu the week of the ritual (Sep 15–17), 11 AM–4 PM ET. Avoid posting same-day (Sunday Sep 20) on Instagram.
+
 ### Regular Congregational Service — Instagram/Facebook — 2026-08-03
 
 🕯️ Join us this Sunday, August 16
@@ -88,6 +90,8 @@ All are welcome • Bring a friend • Join us in comradery and solidarity
 📍 Dao of Life, Maryland HQ
 
 #DaoOfLife #Solidarity #MutualAid #Community #Meditation
+
+📅 Suggested post time: Instagram — Tue–Thu Aug 11–13, 11 AM–4 PM ET (avoid Sunday). Facebook — service-morning exception applies: Sunday Aug 16, 8–10 AM ET.
 
 ### Core Philosophy — Labor Day / Worker Solidarity — Instagram/Facebook — 2026-08-06
 
@@ -103,6 +107,8 @@ All are welcome • Bring a friend • Join us in comradery and solidarity
 
 #DaoOfLife #LaborDay #WorkerSolidarity #MutualAid #Community
 
+📅 Suggested post time: Instagram/Facebook — Tue–Thu, Sep 1–3, late morning–afternoon ET (this is a mission/pillar post, not a service reminder, so it follows the midweek pattern rather than a Sunday exception).
+
 ### Core Philosophy — Labor Day / Worker Solidarity (short) — Bluesky/X — 2026-08-06
 
 *276 characters — fits Bluesky's 300 limit and X's 280 limit.*
@@ -114,3 +120,5 @@ All are welcome • Bring a friend • Join us in comradery and solidarity
 All are welcome • Join us in solidarity, not just words.
 
 #DaoOfLife #LaborDay #WorkerSolidarity
+
+📅 Suggested post time: Bluesky/X — Tue Sep 1 or Wed Sep 2, 8–10 AM or 6–9 PM ET (commute windows, Tue/Wed strongest).

@@ -52,5 +52,27 @@ description: >
    When a post has both a long and short version, label each clearly (e.g. "Instagram/
    Facebook" vs. "Bluesky/X") so it's obvious which is which.
 
-7. Never read, write, or reference actual account credentials or the socials spreadsheet
+7. **Include a suggested best time to post** under each draft (a one-line "📅 Suggested
+   post time: ..." note), using the guidance below — researched for a small local
+   faith/mutual-aid org specifically, not generic brand advice, and assuming Eastern
+   Time (both MD HQ and the MI Branch are Eastern):
+
+   - **Facebook — service-reminder posts:** Sunday morning, 8–10 AM ET (the one
+     genuine weekend exception — matches the 1st/3rd Sunday service schedule).
+     **Facebook — mission/pillar/campaign-theme posts:** Tue–Thu, late morning to
+     afternoon (Tue 9 AM–4 PM, Wed 10 AM–6 PM, Thu 10 AM–4 PM).
+   - **Instagram:** Tue–Thu, 11 AM–4 PM (or 11 AM–1 PM / 7–9 PM as a fallback window).
+     Avoid Sunday entirely, even for service reminders — cross-post the Instagram
+     version earlier in the week instead of same-day.
+   - **Bluesky/X:** Tue–Wed strongest; weekday mornings 8–10 AM or evenings 6–9 PM
+     (commute windows); weekends only pick up midday 12–4 PM if needed.
+   - General rule across all three: avoid weekend afternoons/evenings — Sunday-morning
+     Facebook for service reminders is the only supported weekend exception.
+
+   This guidance was researched 2026-08-06 (see the `dao-of-life-growth` agent run
+   logged around then); if it starts looking stale or platform behavior shifts
+   noticeably, delegate a fresh best-times check to that agent rather than assuming
+   these numbers still hold indefinitely.
+
+8. Never read, write, or reference actual account credentials or the socials spreadsheet
    in Drive — this skill only produces text content.
