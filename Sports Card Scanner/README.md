@@ -85,9 +85,9 @@ access:
   `sets` from it via `db.upsert_player` / `db.upsert_set` instead of (or in
   addition to) the auto-learning above — the matching logic in
   `canonicalize.py` doesn't need to change.
-- **Automated** pricing enrichment (the doc's Phase 3 item — a live lookup
-  against TCG Price Lookup or similar) is **not** included here — a *manual*
-  price field exists instead, see "Price tracking" below.
+- Automated pricing enrichment now exists too, but is deliberately separate
+  from this canonicalization mechanism and from the manual `price` field —
+  it's on-demand, eBay-sourced, and covered in "Price tracking" below.
 
 ### Fill-in-missing-fields (`enrich.py`)
 
@@ -104,8 +104,10 @@ of cards, plus non-sports cards and memorabilia" — see [[Hobby Log]]
 2. **Web fallback**, only when the card's *key* fields are solid (canonical
    player, canonical set, and a confident year — all ≥ 0.85): a second Claude
    API call, reusing your existing `ANTHROPIC_API_KEY`, using Anthropic's
-   server-side web-search tool to check card-database sites (tcdb.com,
-   Beckett checklists, etc.) for the missing field. Anything found gets
+   server-side web-search tool steered at **eBay's current/active listings**
+   specifically (listing titles reliably include card number, team, and
+   parallel/insert type; cross-referenced across a few listings rather than
+   trusting one seller's title) for the missing field. Anything found gets
    written back into `checklist_entries`, so the next card with the same
    player+set+card_number hits the fast local path instead of searching
    again.
@@ -134,22 +136,53 @@ of cards, plus non-sports cards and memorabilia" — see [[Hobby Log]]
 
 ## Price tracking
 
-A `price` (number) and `date_priced` (date) field exist on every card,
-editable from the UI right under a scan's result and under each flagged
-card in "Needs Review" — `POST /scan/{job_id}/price`, `{"price": 25.00,
-"date_priced": "2026-08-10"}` (`date_priced` defaults to today if omitted).
+Two separate, never-conflated price fields exist on every card:
 
-**Deliberately manual, not auto-populated.** Unlike `card_number`/`team`/
-etc., a price isn't printed on the card for the vision model to read, and
-unlike those fields it isn't a fixed fact — it changes over time and depends
-heavily on condition/grade, which isn't currently tracked at all (a PSA 10
-vs. a raw/played copy of the same card can differ 10–100x in value). An
-auto-lookup version would need its own design (staleness/refresh handling,
-a condition/grade field, another paid web-search call per card) — this is
-intentionally just the simple version: you look the price up yourself and
-log it.
+### Manual price (`price` / `date_priced`)
 
-**No browsable "all cards" view yet.** The price form only appears next to
+What *you* say it's worth or paid — `POST /scan/{job_id}/price`,
+`{"price": 25.00, "date_priced": "2026-08-10"}` (`date_priced` defaults to
+today if omitted). Never touched automatically. Editable from the UI right
+under a scan's result and under each flagged card in "Needs Review".
+
+### eBay-estimated price (`estimated_price` / `estimated_price_date` / `estimated_price_source` / `estimated_price_caveat`)
+
+An on-demand estimate from recently **sold** eBay listings (not active
+ones), via `POST /scan/{job_id}/estimate-price` — click "Estimate Price
+from eBay" in the UI. Requires `player`/`set`/`year` to already be
+confidently known (canonicalized/confirmed) — the endpoint returns 400 if
+not, since a price search on an unidentified card would be meaningless.
+
+- **Condition-aware.** Uses the vision-extracted `condition` field (see
+  below) so the search targets comps in a comparable condition — a raw/
+  played copy and a PSA 10 of the *same card* can differ 10–100x in sold
+  price, so an estimate without this would be closer to noise than signal.
+- **On-demand only, not automatic per scan, and not cached forever** the
+  way `checklist_entries` caches card_number/team (a sold price goes stale;
+  a fixed fact like card_number doesn't). Cost is bounded by how often you
+  actually click the button, not by scan volume.
+- Comes back with a `caveat` string (e.g. "only 2 comps found (~2 comps)",
+  "condition assumed since not specified") — read it, this is an estimate
+  from a handful of comps, not an appraisal.
+- Fails soft, same as `enrich.py`'s other web lookups: no API key, a bad
+  web-search tool version, no usable sold comps found, or a network error
+  all just return a "couldn't estimate" response (502) rather than
+  breaking anything else on the card.
+
+### Condition (new field on every scan)
+
+`extraction.py` now also asks the vision model for `condition`: an exact
+grade read off a visible slab label (e.g. `"PSA 9"`, high confidence, since
+that's precisely legible) or a rough visual call for a raw/ungraded card
+(`"Raw - Near Mint"` / `"Raw - Excellent"` / `"Raw - Good"` / `"Raw - Poor"`,
+kept at moderate confidence since visual condition assessment from a photo
+alone is inherently imprecise). This exists specifically to make the eBay
+price estimate above condition-aware — it's not canonicalized or
+checklist-cached (excluded for the same reason as `serial_number`:
+condition is a fact about your specific physical copy, not a checklist
+fact true for every copy of that card).
+
+**No browsable "all cards" view yet.** Both price forms only appear next to
 a card right after you scan it, or if that card is currently flagged in
 "Needs Review". A card that scanned clean (no fields under threshold) has no
 other UI entry point to add/edit its price later — set it right after
@@ -209,6 +242,18 @@ before commit). **The actual web-search call path (Claude's server-side
 web-search tool doing a real lookup) has not been tested with a live API
 key** — that's the next real thing to verify, including whether
 `WEB_SEARCH_TOOL_TYPE` is still the correct tool version.
+
+**eBay-targeting + `condition` field + price estimation smoke-tested
+2026-08-07** via a real `fastapi.testclient.TestClient` run against the
+actual app (not just calling functions directly): confirmed `condition` is
+now a field the vision tool schema requests, confirmed
+`POST /scan/{job_id}/estimate-price` correctly 400s when player/set/year
+aren't confidently known (no wasted lookup attempted), correctly 502s
+rather than crashing when `ANTHROPIC_API_KEY` isn't set, correctly 404s on
+an unknown job, and confirmed a full `ScanResult` round-trip includes all
+four new estimated-price fields. **Still not tested: an actual eBay
+sold-listings search with a live API key** — same open item as the rest of
+the web-lookup path.
 
 **Windows gotcha hit during testing:** `kill $!` from a background-launched
 git-bash job doesn't map to the real Windows PID for a spawned `uvicorn`

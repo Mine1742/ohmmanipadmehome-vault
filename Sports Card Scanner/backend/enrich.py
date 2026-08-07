@@ -19,9 +19,10 @@ cache-aside, not a bulk import:
        player, canonical set, confident year) are solid enough to search on,
        do a live web lookup via a second Claude API call using the same
        ANTHROPIC_API_KEY already configured for extraction.py, with
-       Anthropic's server-side web_search tool (searches card-database sites
-       like tcdb.com / Beckett checklists, not a scrape you have to
-       maintain). Anything the web lookup finds gets written back into
+       Anthropic's server-side web_search tool steered at eBay's current/
+       active listings specifically (listing titles reliably include player,
+       year, set, card number, and parallel/insert type) -- not a scrape you
+       have to maintain. Anything the web lookup finds gets written back into
        checklist_entries, so the *next* card with the same player+set+
        card_number hits the fast local path instead of searching again.
     3. Every unique (player, set, target-field) combo is only ever attempted
@@ -43,6 +44,27 @@ known at the time this was written -- verify it against the current
 Anthropic API docs before relying on this in production; if the API rejects
 it, enrichment fails soft (see enrich_fields) and scanning still works,
 just without fill-in-missing-fields for that card.
+
+This module also does eBay-sourced price estimation (estimate_price_from_
+ebay / PRICE_LOOKUP), searching recently SOLD/completed eBay listings
+rather than active ones -- price is fundamentally different from card_
+number/team, so it's handled separately, not folded into enrich_fields:
+    - It's condition-aware. A raw/played copy and a graded PSA 10 of the
+      *same card* can differ 10-100x in sold price, so the query includes
+      the vision-extracted `condition` field (see extraction.py) and the
+      result should be treated as an estimate for a comparable-condition
+      card, not a guaranteed value for your exact copy.
+    - It's on-demand only, not automatic per scan and not gated by
+      web_lookup_log's "attempt once ever" cache. Unlike a fixed checklist
+      fact, a sold price goes stale -- caching it forever the way
+      checklist_entries does would be actively wrong. Instead, it's only
+      ever run when explicitly requested (see main.py's
+      POST /scan/{job_id}/estimate-price), so cost is bounded by how often
+      you actually ask, and each estimate is naturally "fresh" as of when
+      you asked for it.
+    - It's kept in a separate estimated_price/estimated_price_date/
+      estimated_price_source set of columns, never touching or overwriting
+      the manual price/date_priced fields you enter yourself.
 """
 import os
 
@@ -118,13 +140,16 @@ def _web_lookup_checklist(
                     "role": "user",
                     "content": (
                         f"Research this specific trading card: {card_desc}. "
-                        "Search sports-card checklist/database sites (e.g. Trading Card "
-                        "Database / tcdb.com, Beckett checklists, manufacturer set lists) "
-                        "to find its card number, the player's team as printed on this "
-                        "specific card/set, and its parallel/insert type (e.g. 'Base' for "
-                        "a standard card, or the parallel name like 'Refractor'). Summarize "
-                        "exactly what you found, and say clearly if you couldn't confirm "
-                        "something specific to this card (don't guess)."
+                        "Search eBay.com for CURRENT/active listings of this exact card "
+                        "(site:ebay.com or ebay.com search results) -- listing titles for "
+                        "this kind of card reliably include the card number, team, and "
+                        "parallel/insert type. Cross-reference a few listings rather than "
+                        "trusting just one, since individual sellers sometimes mistitle "
+                        "listings. Find its card number, the player's team as printed on "
+                        "this specific card/set, and its parallel/insert type (e.g. 'Base' "
+                        "for a standard card, or the parallel name like 'Refractor'). "
+                        "Summarize exactly what you found, and say clearly if you couldn't "
+                        "confirm something specific to this card (don't guess)."
                     ),
                 }
             ],
@@ -253,6 +278,121 @@ def _enrich_fields_inner(fields: dict) -> dict:
             target_field["confidence"] = WEB_LOOKUP_CONFIDENCE
 
     return result
+
+
+PRICE_ESTIMATE_TOOL = {
+    "name": "record_price_estimate",
+    "description": "Record an estimated price for a specific trading card based on recently sold eBay listings.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "estimated_price": {
+                "type": "number",
+                "description": "A representative price in USD from recently sold comps, or 0 if no usable sold comps were found",
+            },
+            "comp_count": {
+                "type": "integer",
+                "description": "Roughly how many comparable sold listings the estimate is based on",
+            },
+            "found_anything": {
+                "type": "boolean",
+                "description": "true if usable sold comps were found for this card in a comparable condition, false otherwise",
+            },
+            "caveat": {
+                "type": "string",
+                "description": "Any important caveat, e.g. 'only 2 comps found', 'condition assumed since not specified', 'wide price range observed'",
+            },
+        },
+        "required": ["estimated_price", "comp_count", "found_anything", "caveat"],
+    },
+}
+
+PRICE_ESTIMATE_SOURCE = "ebay_sold_comps"
+
+
+def estimate_price_from_ebay(
+    player_name: str, set_name: str, year: str | None, card_number: str | None, condition: str | None
+) -> dict | None:
+    """On-demand only -- see module docstring. Two-call pattern like
+    _web_lookup_checklist: research via web_search targeted at eBay sold/
+    completed listings, then force structured output. Returns
+    {"estimated_price": float, "caveat": str} (caveat includes the comp
+    count) or None on failure / no usable comps. Never raises -- callers
+    should treat None as "couldn't estimate," not an error."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    client = anthropic.Anthropic(api_key=api_key)
+
+    card_desc = f"{year or ''} {set_name} {player_name}".strip()
+    if card_number:
+        card_desc += f", card number {card_number}"
+    condition_desc = condition if condition and condition != "N/A" else "condition unspecified/unknown"
+
+    try:
+        research = client.messages.create(
+            model=ENRICH_MODEL,
+            max_tokens=1024,
+            tools=[{"type": WEB_SEARCH_TOOL_TYPE, "name": "web_search", "max_uses": 3}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Research recent SOLD prices on eBay for this specific trading "
+                        f"card: {card_desc}, condition: {condition_desc}. Search eBay.com "
+                        "sold/completed listings specifically (not active/current "
+                        "listings) -- eBay's sold-listings filter is "
+                        "'LH_Sold=1&LH_Complete=1' in a search URL, or look for listings "
+                        "explicitly marked sold. Only use comps that reasonably match the "
+                        "condition given, or note clearly if you had to assume a condition "
+                        "because none was specified. Report the range and a representative "
+                        "typical price you observed, roughly how many comparable sold "
+                        "listings you found, and any caveats (wide price spread, very few "
+                        "comps, condition mismatch). If you can't find usable sold comps "
+                        "for this specific card, say so plainly rather than estimating from "
+                        "a similar-but-different card."
+                    ),
+                }
+            ],
+        )
+        summary = "".join(block.text for block in research.content if block.type == "text")
+        if not summary.strip():
+            return None
+
+        structured = client.messages.create(
+            model=ENRICH_MODEL,
+            max_tokens=512,
+            tools=[PRICE_ESTIMATE_TOOL],
+            tool_choice={"type": "tool", "name": "record_price_estimate"},
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Research summary about recent eBay sold prices for "
+                        f"'{card_desc}' ({condition_desc}):\n\n{summary}\n\n"
+                        "Record the findings. Set found_anything to false and "
+                        "estimated_price to 0 if no usable sold comps were actually "
+                        "found -- don't invent a number."
+                    ),
+                }
+            ],
+        )
+    except anthropic.APIError:
+        return None
+
+    tool_use_block = next((b for b in structured.content if b.type == "tool_use"), None)
+    if tool_use_block is None:
+        return None
+    result = tool_use_block.input
+    if not result.get("found_anything") or not result.get("estimated_price"):
+        return None
+
+    caveat = result.get("caveat") or ""
+    comp_count = result.get("comp_count")
+    if comp_count is not None:
+        caveat = f"{caveat} (~{comp_count} comps)".strip()
+
+    return {"estimated_price": float(result["estimated_price"]), "caveat": caveat or None}
 
 
 def learn_from_correction(field: str, corrected_value: str, current_fields: dict) -> None:

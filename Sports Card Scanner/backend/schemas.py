@@ -24,6 +24,7 @@ class CardFields(BaseModel):
     serial_number: FieldValue
     parallel_insert_type: FieldValue
     notable_flags: FieldValue
+    condition: FieldValue
 
 
 class UploadResponse(BaseModel):
@@ -39,8 +40,18 @@ class ScanResult(BaseModel):
     fields: Optional[CardFields] = None
     needs_review: bool = False
     error: Optional[str] = None
+    # Your own entry -- what you paid, or what you believe it's worth. Never
+    # auto-filled. See PriceSubmission / POST /scan/{job_id}/price.
     price: Optional[float] = None
     date_priced: Optional[str] = None
+    # An eBay-sourced estimate, kept deliberately separate from the manual
+    # price above and never overwrites it. Only set when you explicitly
+    # request it -- see POST /scan/{job_id}/estimate-price -- since it costs
+    # a web-search call each time and isn't run automatically per scan.
+    estimated_price: Optional[float] = None
+    estimated_price_date: Optional[str] = None
+    estimated_price_source: Optional[str] = None
+    estimated_price_caveat: Optional[str] = None
 
 
 class ReviewSubmission(BaseModel):

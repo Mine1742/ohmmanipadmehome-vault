@@ -93,6 +93,10 @@ def _row_to_result(row) -> ScanResult:
         error=row["error"],
         price=row["price"],
         date_priced=row["date_priced"],
+        estimated_price=row["estimated_price"],
+        estimated_price_date=row["estimated_price_date"],
+        estimated_price_source=row["estimated_price_source"],
+        estimated_price_caveat=row["estimated_price_caveat"],
     )
 
 
@@ -143,6 +147,58 @@ def submit_price(job_id: str, submission: PriceSubmission) -> ScanResult:
         raise HTTPException(status_code=404, detail="job not found")
     date_priced = submission.date_priced or datetime.date.today().isoformat()
     db.set_price(job_id, submission.price, date_priced)
+    return _row_to_result(db.get_card(job_id))
+
+
+@app.post("/scan/{job_id}/estimate-price")
+def estimate_price(job_id: str) -> ScanResult:
+    """On-demand only -- see enrich.py's module docstring for why this isn't
+    run automatically per scan. Costs one eBay-targeted web-search call each
+    time it's invoked."""
+    row = db.get_card(job_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    fields = json.loads(row["fields_json"]) if row["fields_json"] else {}
+
+    player_field = fields.get("player", {})
+    set_field = fields.get("set", {})
+    year_field = fields.get("year", {})
+    player_name = player_field.get("canonical_value") or player_field.get("value")
+    set_name = set_field.get("canonical_value") or set_field.get("value")
+    year_value = year_field.get("value")
+
+    key_ready = (
+        player_name
+        and set_name
+        and year_value
+        and year_value != "N/A"
+        and player_field.get("confidence", 0) >= enrich.KEY_CONFIDENCE_THRESHOLD
+        and set_field.get("confidence", 0) >= enrich.KEY_CONFIDENCE_THRESHOLD
+        and year_field.get("confidence", 0) >= enrich.KEY_CONFIDENCE_THRESHOLD
+    )
+    if not key_ready:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Player, set, and year all need to be confidently known before a "
+                "price can be estimated -- review/correct them first."
+            ),
+        )
+
+    card_number = fields.get("card_number", {}).get("value")
+    condition = fields.get("condition", {}).get("value")
+
+    result = enrich.estimate_price_from_ebay(player_name, set_name, year_value, card_number, condition)
+    if result is None:
+        raise HTTPException(
+            status_code=502,
+            detail="Couldn't find a usable price estimate (no sold comps found, or the lookup failed).",
+        )
+
+    today = datetime.date.today().isoformat()
+    db.set_estimated_price(
+        job_id, result["estimated_price"], today, enrich.PRICE_ESTIMATE_SOURCE, result.get("caveat")
+    )
     return _row_to_result(db.get_card(job_id))
 
 

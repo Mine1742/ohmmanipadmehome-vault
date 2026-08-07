@@ -78,8 +78,9 @@ Phase 2 – Accuracy Upgrade — in progress
 
 Phase 3 – Production Quality — not started
 - Serial-number OCR fallback (PaddleOCR-VL/GLM-OCR) for cases Claude misses
-- Automated pricing/enrichment via TCG Price Lookup (see the manual version
-  already done below, outside the original doc's phase structure)
+- Pricing/enrichment via a dedicated card-data API (TCG Price Lookup etc.) —
+  superseded in practice by the eBay-targeted approach below, though a real
+  official API could still replace it for more structured/reliable data
 - Batch API usage for bulk re-scans
 - Periodic re-run of the evaluation set to catch model/prompt regressions
 
@@ -92,10 +93,39 @@ Outside the original doc's phases (added by direct request)
   every scan result and every flagged review card. Deliberately manual, not
   looked up — price isn't printed on a card for vision to read, isn't a
   fixed fact like card_number (it changes over time), and is heavily
-  condition/grade-dependent, which isn't tracked yet. An automated version
-  would need its own design (staleness/refresh handling, a condition/grade
-  field) — logged above under Phase 3 as a possible future pass. Known gap:
-  no general "browse all cards" view yet, so a clean-scanning card (nothing
-  flagged for review) can only get a price set right after its scan.
+  condition/grade-dependent, which isn't tracked yet.
+- **Condition field — done 2026-08-07.** Added `condition` to
+  `extraction.py`'s vision schema: exact grade off a visible slab label
+  (high confidence) or a rough raw/ungraded call (moderate confidence,
+  since visual assessment from a photo is inherently imprecise). Not
+  canonicalized/checklist-cached — same reasoning as `serial_number`,
+  condition is a fact about the specific physical copy, not a checklist
+  fact true for every copy of that card.
+- **eBay-targeted enrichment + on-demand eBay price estimation — done
+  2026-08-07.** By direct request: option to steer the existing
+  `enrich.py` web-search fallback (card_number/team/parallel_insert_type)
+  at eBay's *current* listings specifically, rather than generic
+  checklist/database sites, and add a genuinely new capability -- an
+  `estimated_price`/`estimated_price_date`/`estimated_price_source`/
+  `estimated_price_caveat` set of fields, condition-aware (uses the new
+  `condition` field), sourced from eBay's recently-*sold* listings via a
+  second Claude API call (same two-call research-then-structure pattern as
+  the rest of `enrich.py`). Deliberately **not** an official eBay API
+  integration (Browse API / Marketplace Insights) -- that would need the
+  owner to register for eBay developer credentials and possibly gated
+  sold-data API access; this reuses the existing `ANTHROPIC_API_KEY` and
+  Claude's web-search tool instead, at the cost of relying on general web
+  search actually surfacing decent eBay results rather than a structured
+  API response. Deliberately kept **separate from and never overwriting**
+  the manual price field, and deliberately **not** run automatically per
+  scan or cached the way `checklist_entries` caches card_number/team --
+  price goes stale, so it's on-demand only
+  (`POST /scan/{job_id}/estimate-price`), gated on player/set/year already
+  being confidently known. New endpoint + the full pipeline verified with a
+  real `fastapi.testclient.TestClient` run (400/502/404 gating all correct,
+  full `ScanResult` round-trip) -- the actual live eBay web-search call
+  itself is still untested with a real API key, same open item as the rest
+  of `enrich.py`. Full detail: `Sports Card Scanner/README.md` → "Price
+  tracking".
 
 See [[Hobby Log]] for the dated narrative.

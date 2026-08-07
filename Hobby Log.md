@@ -108,3 +108,37 @@ scan completes and next to each flagged review card. Known gap, called out in
 the docs rather than left implicit: there's no general "browse all cards" view
 yet, so a card that scans clean (nothing flagged) only gets one chance at
 having its price set, right after that scan.
+
+Extended pricing to use eBay specifically, by request: (1) steered enrich.py's
+existing card-detail web-search fallback (card_number/team/parallel_insert_type)
+at eBay's current listings specifically instead of generic checklist sites,
+since listing titles reliably carry that info; (2) added a genuinely new
+on-demand price-estimation feature sourced from eBay's recently *sold*
+listings. Two real design questions came up before building the price part,
+both resolved before writing code: whether to go through eBay's actual
+developer API (Browse API + Marketplace Insights for sold data) or steer
+Claude's existing web-search tool at eBay -- went with the latter, since it
+needed no new credentials and the sold-data API has historically been
+gated/requires approval; and whether a price estimate without any condition
+signal would even be meaningful -- it wouldn't (a raw copy vs. a graded PSA 10
+of the same card can differ 10-100x), so added a `condition` field to
+extraction.py's vision schema first (exact grade off a visible slab label, or
+a rough raw/ungraded call) specifically so the price search could be
+condition-matched.
+
+Kept the eBay estimate strictly separate from the manual price field --
+different columns, never overwrites it -- and deliberately did NOT fold it
+into `checklist_entries`'s caching pattern the way card_number/team are
+cached: a sold price goes stale in a way a card's printed number never does,
+so it's on-demand only (a new "Estimate Price from eBay" button /
+`POST /scan/{job_id}/estimate-price`), gated on player/set/year already being
+confidently known, and comes back with a caveat string (comp count, condition
+caveats) rather than a bare number. Verified the new endpoint's gating and
+fail-soft behavior with a real `fastapi.testclient.TestClient` run against the
+actual app (400 when key fields aren't confident, 502 without an API key
+rather than a crash, 404 on an unknown job, full ScanResult round-trip) --
+first time testing went through the real app instance rather than calling
+functions directly. The live eBay web-search call itself is still untested
+with a real API key, same open item as the rest of `enrich.py`. See
+[[Sports Card Scanning - Build Plan]] and `Sports Card Scanner/README.md` for
+full detail.

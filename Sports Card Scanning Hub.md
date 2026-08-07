@@ -6,7 +6,7 @@ Personal hobby project: a mobile-to-backend pipeline that photographs sports car
 
 ## Operating Guide
 
-_Living document — update this section whenever how the program is run, accessed, or reviewed changes. Current as of 2026-08-07 (Phase 1 MVP + canonicalization + fill-in-missing-fields enrichment from Phase 2 + manual price tracking). Full dev-oriented setup/troubleshooting detail lives in `Sports Card Scanner/README.md`; this is the "how do I actually use it" version._
+_Living document — update this section whenever how the program is run, accessed, or reviewed changes. Current as of 2026-08-07 (Phase 1 MVP + canonicalization + fill-in-missing-fields enrichment from Phase 2 + manual price tracking + eBay-targeted lookups/price estimation + condition field). Full dev-oriented setup/troubleshooting detail lives in `Sports Card Scanner/README.md`; this is the "how do I actually use it" version._
 
 **Starting the server**
 1. Open a terminal, `cd` into `Sports Card Scanner/backend`
@@ -19,8 +19,9 @@ _Living document — update this section whenever how the program is run, access
 1. With the server running, open http://localhost:8000 in a browser
 2. Drag/drop (or click to select) a front photo — required — and a back photo — optional but recommended if the serial number is on the back
 3. Click "Upload & Scan" — it uploads, then polls automatically until Claude finishes reading the card (a few seconds)
-4. Extracted fields show up as JSON on the page — `player`/`set` will include `canonical_value`/`canonical_score` if a confident match against your growing reference table was found, and `card_number`/`team`/`parallel_insert_type` may show up filled in with a `source` of `local_lookup` or `web_lookup` even if the vision model itself couldn't read them (see below)
+4. Extracted fields show up as JSON on the page — this now includes `condition` (a graded slab's exact grade if visible, else a rough raw/ungraded call), `player`/`set` will include `canonical_value`/`canonical_score` if a confident match against your growing reference table was found, and `card_number`/`team`/`parallel_insert_type` may show up filled in with a `source` of `local_lookup` or `web_lookup` (now specifically eBay-targeted — see below) even if the vision model itself couldn't read them
 5. Right below that, a price + date box is ready to fill in — type what you paid or its current value and click "Save Price." This is entirely manual (see "How price tracking works" below); the model doesn't guess at it
+6. Below that, an "Estimate Price from eBay" button — click it to search recently *sold* eBay listings for a condition-matched estimate. Requires player/set/year to already be confidently known; takes a few seconds (it's a live web search)
 
 **Reviewing flagged cards**
 - Any field the model wasn't confident about (below 0.85) automatically shows up in the "Needs Review" section on the same page, with an editable text box per field
@@ -35,14 +36,15 @@ _Living document — update this section whenever how the program is run, access
 - Full mechanics: `Sports Card Scanner/README.md` → "Canonicalization & enrichment"
 
 **How fill-in-missing-fields enrichment works**
-- For `card_number`/`team`/`parallel_insert_type` specifically (not `serial_number` — see README for why): if the vision model couldn't read one confidently, but it *did* confidently read the player, set, and year, the system checks your own `checklist_entries` table first, then falls back to a live web search (reusing your Claude API key) if nothing local exists yet
+- For `card_number`/`team`/`parallel_insert_type` specifically (not `serial_number` — see README for why): if the vision model couldn't read one confidently, but it *did* confidently read the player, set, and year, the system checks your own `checklist_entries` table first, then falls back to a live web search — now specifically targeted at **eBay's current listings** — (reusing your Claude API key) if nothing local exists yet
 - A web-found value shows up already filled in, but flagged for review rather than fully trusted — approving it in the review UI makes it a verified fact for every future card with that same player+set+card_number
 - Given the collection's actual scale (millions of cards, plus non-sports cards/memorabilia), this deliberately doesn't try to pre-populate anything — it only ever looks up what a specific card you scan actually needs, and each unique gap is only searched once
 - Full mechanics: `Sports Card Scanner/README.md` → "Fill-in-missing-fields (`enrich.py`)"
 
 **How price tracking works**
-- Fully manual — a `price` + `date_priced` box appears right after any scan completes, and next to each card still in the "Needs Review" list. Type a value, click "Save Price." Nothing is looked up or guessed automatically
-- Kept manual on purpose: price changes over time (unlike card_number/team, which are fixed facts) and depends heavily on condition/grade, which isn't tracked at all yet — an accurate auto-lookup would need its own design pass
+- **Two separate fields, never conflated:** a manual `price`/`date_priced` (what you say it's worth — a box appears right after any scan completes, and next to each card still in "Needs Review"; type a value, click "Save Price," nothing looked up automatically), and a separate eBay-sourced `estimated_price` (click "Estimate Price from eBay" — searches recently *sold* listings, condition-matched using the new `condition` field, returns a price + a caveat like "~3 comps")
+- Kept manual as the default on purpose: price changes over time (unlike card_number/team, which are fixed facts) and is heavily condition-dependent — the estimate button exists for when you want a data point, but it never overwrites your own entry
+- The eBay estimate is **on-demand only** — not run automatically per scan, and not cached forever the way card_number/team are, since a sold price goes stale. Costs one web-search call per click, so it's bounded by how often you actually ask
 - **No general "browse all cards" view yet** — if a card scans clean (nothing flagged for review), the only chance to set its price from the UI is right after that scan. A card you want to price later needs either a re-visit while it's still on-screen, or a direct edit via `cards.db` (see "Where your data lives" below) until a browse/edit view exists
 - Full mechanics: `Sports Card Scanner/README.md` → "Price tracking"
 
@@ -61,11 +63,11 @@ _Living document — update this section whenever how the program is run, access
   ```
 
 **Known current limits** (see [[sports_card_scanning_recommendations]] for the full picture)
-- Canonicalization/enrichment cover player/set/card_number/team/parallel_insert_type only, not serial_number (excluded on purpose — see README) — and there's no external card database behind any of it, only the self-assembled local table + capped live web lookups (see above)
+- Canonicalization/enrichment cover player/set/card_number/team/parallel_insert_type only, not serial_number or condition (both excluded on purpose — see README) — and there's no eBay API/official integration behind any of it, only Claude's general web-search tool steered at eBay via prompting
 - No serial-number retry/zoom pass yet — a low-confidence serial number just gets flagged like any other field
-- Non-sports cards and memorabilia aren't handled — the extraction schema (player/team/year/set/card_number/serial_number) is sports-card-shaped; a separate schema would be needed for tickets, autographs, etc.
-- Price is manual-only, and has no general browse/edit view yet — see "How price tracking works" above
-- Only tested against one real card so far via the actual pipeline — accuracy at volume is unproven. Canonicalization and the *local* half of enrichment were verified with standalone smoke tests (see `Sports Card Scanner/README.md`); the live web-lookup call itself hasn't been exercised with a real API key yet
+- Non-sports cards and memorabilia aren't handled — the extraction schema (player/team/year/set/card_number/serial_number/condition) is sports-card-shaped; a separate schema would be needed for tickets, autographs, etc.
+- eBay price estimation has no general browse/edit view yet, same limit as manual price — see "How price tracking works" above
+- Only tested against one real card so far via the actual pipeline — accuracy at volume is unproven. Canonicalization, the *local* half of enrichment, and the new eBay-targeting/estimate-price gating logic were all verified with standalone/TestClient smoke tests (see `Sports Card Scanner/README.md`); the live web-search call itself (card-detail lookup or price estimate) hasn't been exercised with a real API key yet
 
 Recommendations & Architecture
 [[sports_card_scanning_recommendations]]

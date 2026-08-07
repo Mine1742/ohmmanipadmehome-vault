@@ -16,6 +16,15 @@ Read the front (and back, if provided) carefully. Card layout conventions:
 - parallel_insert_type is the parallel/insert name if visible (e.g. 'Refractor', 'Gold
   Parallel', 'Base') or 'Base' if it's a standard base card.
 - notable_flags should note visible autograph or memorabilia/relic patches, else 'none'.
+- condition: if the card is in a graded slab (PSA/BGS/SGC/etc.), read the exact grade
+  printed on the label (e.g. 'PSA 9', 'BGS 8.5', 'SGC 10') -- this is a precise,
+  legible fact, so confidence should be high. If the card is raw/ungraded, give a
+  rough visual condition assessment using one of: 'Raw - Near Mint', 'Raw - Excellent',
+  'Raw - Good', 'Raw - Poor', based on visible centering, corner sharpness, edge wear,
+  and surface condition. Visual condition assessment from a photo alone is inherently
+  imprecise -- keep confidence moderate at best for a raw-condition call (below 0.85
+  unless wear/damage is obvious and unambiguous either way), separate from how clearly
+  you could read the value.
 
 If a field is not present on the card (e.g. no serial number on a base card), return
 value 'N/A' with confidence 1.0. If a field is present but you are not confident you
@@ -33,6 +42,7 @@ FIELD_NAMES = [
     "serial_number",
     "parallel_insert_type",
     "notable_flags",
+    "condition",
 ]
 
 RECORD_CARD_FIELDS_TOOL = {

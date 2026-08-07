@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS cards (
     image_path_back TEXT,
     price REAL,
     date_priced TEXT,
+    estimated_price REAL,
+    estimated_price_date TEXT,
+    estimated_price_source TEXT,
+    estimated_price_caveat TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -98,6 +102,10 @@ def init_db() -> None:
         conn.executescript(SCHEMA)
         _ensure_column(conn, "cards", "price", "REAL")
         _ensure_column(conn, "cards", "date_priced", "TEXT")
+        _ensure_column(conn, "cards", "estimated_price", "REAL")
+        _ensure_column(conn, "cards", "estimated_price_date", "TEXT")
+        _ensure_column(conn, "cards", "estimated_price_source", "TEXT")
+        _ensure_column(conn, "cards", "estimated_price_caveat", "TEXT")
 
 
 def create_card(job_id: str, image_path_front: str, image_path_back: str | None) -> None:
@@ -114,6 +122,17 @@ def set_price(job_id: str, price: float, date_priced: str) -> None:
         conn.execute(
             "UPDATE cards SET price = ?, date_priced = ? WHERE job_id = ?",
             (price, date_priced, job_id),
+        )
+
+
+def set_estimated_price(
+    job_id: str, price: float, date: str, source: str, caveat: str | None = None
+) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE cards SET estimated_price = ?, estimated_price_date = ?, "
+            "estimated_price_source = ?, estimated_price_caveat = ? WHERE job_id = ?",
+            (price, date, source, caveat, job_id),
         )
 
 

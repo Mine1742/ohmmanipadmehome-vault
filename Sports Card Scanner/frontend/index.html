@@ -45,7 +45,7 @@
 <div id="reviewList"><small class="hint">Loading…</small></div>
 
 <script>
-const FIELD_NAMES = ["player","team","year","set","card_number","serial_number","parallel_insert_type","notable_flags"];
+const FIELD_NAMES = ["player","team","year","set","card_number","serial_number","parallel_insert_type","notable_flags","condition"];
 const CONF_THRESHOLD = 0.85;
 
 function setupDropzone(zoneId, inputId, previewId) {
@@ -104,8 +104,9 @@ async function pollResult(jobId, resultDiv) {
     resultDiv.textContent = "Extraction failed: " + data.error;
     return;
   }
-  resultDiv.innerHTML = "<pre>" + JSON.stringify(data.fields, null, 2) + "</pre>" + priceFormHtml(data);
+  resultDiv.innerHTML = "<pre>" + JSON.stringify(data.fields, null, 2) + "</pre>" + priceFormHtml(data) + estimateFormHtml(data);
   wirePriceForms(resultDiv);
+  wireEstimateForms(resultDiv);
   loadReviewList();
 }
 
@@ -138,6 +139,38 @@ function wirePriceForms(container) {
   });
 }
 
+function estimateLineHtml(card) {
+  if (card.estimated_price == null) return `<small class="hint">No eBay estimate yet.</small>`;
+  const caveat = card.estimated_price_caveat ? ` <small class="hint">${card.estimated_price_caveat}</small>` : "";
+  return `<strong>eBay estimate:</strong> $${Number(card.estimated_price).toFixed(2)} (as of ${card.estimated_price_date})${caveat}`;
+}
+
+function estimateFormHtml(card) {
+  return `<div class="field-row" style="flex-direction: column; align-items: flex-start; gap: 0.35rem;">
+    <div data-estimate-line="${card.job_id}">${estimateLineHtml(card)}</div>
+    <button data-estimate-price="${card.job_id}">Estimate Price from eBay</button>
+  </div>`;
+}
+
+function wireEstimateForms(container) {
+  container.querySelectorAll("button[data-estimate-price]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const jobId = btn.getAttribute("data-estimate-price");
+      const origText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Searching eBay sold listings…";
+      const res = await fetch(`/scan/${jobId}/estimate-price`, { method: "POST" });
+      const data = await res.json();
+      btn.disabled = false;
+      btn.textContent = origText;
+      if (!res.ok) { alert("Couldn't estimate price: " + (data.detail || JSON.stringify(data))); return; }
+      document.querySelectorAll(`[data-estimate-line="${jobId}"]`).forEach(el => {
+        el.innerHTML = estimateLineHtml(data);
+      });
+    });
+  });
+}
+
 async function loadReviewList() {
   const listDiv = document.getElementById("reviewList");
   const res = await fetch("/scan/list?needs_review=true");
@@ -166,7 +199,7 @@ async function loadReviewList() {
         ${canon}${source}
       </div>`;
     }
-    html += priceFormHtml(card);
+    html += priceFormHtml(card) + estimateFormHtml(card);
     row.innerHTML = html;
     listDiv.appendChild(row);
   }
@@ -185,6 +218,7 @@ async function loadReviewList() {
     });
   });
   wirePriceForms(listDiv);
+  wireEstimateForms(listDiv);
 }
 
 loadReviewList();
