@@ -17,14 +17,17 @@ cache-aside, not a bulk import:
        built entirely from your own scans and corrections -- see db.py).
     2. Web fallback: if nothing local and the card's *key* fields (canonical
        player, canonical set, confident year) are solid enough to search on,
-       do a live web lookup via a second Claude API call using the same
-       ANTHROPIC_API_KEY already configured for extraction.py, with
-       Anthropic's server-side web_search tool steered at eBay's current/
-       active listings specifically (listing titles reliably include player,
-       year, set, card number, and parallel/insert type) -- not a scrape you
-       have to maintain. Anything the web lookup finds gets written back into
-       checklist_entries, so the *next* card with the same player+set+
-       card_number hits the fast local path instead of searching again.
+       look up the missing field via ebay_api.py's real eBay Browse API
+       (active listings) if EBAY_CLIENT_ID/EBAY_CLIENT_SECRET are configured,
+       falling back to a live Claude web_search call steered at eBay when
+       the real API isn't configured or returns nothing. Either way, the raw
+       material (real eBay listing titles, or Claude's own web research) is
+       handed to the same forced-structured-output step, so the result
+       shape doesn't depend on which source was used -- see
+       _web_lookup_checklist. Anything found gets written back into
+       checklist_entries (tagged with which source found it), so the *next*
+       card with the same player+set+card_number hits the fast local path
+       instead of searching again.
     3. Every unique (player, set, target-field) combo is only ever attempted
        once via the web (see web_lookup_log / has_attempted_web_lookup) --
        duplicate/near-duplicate cards in a big collection don't re-trigger
@@ -65,12 +68,21 @@ number/team, so it's handled separately, not folded into enrich_fields:
     - It's kept in a separate estimated_price/estimated_price_date/
       estimated_price_source set of columns, never touching or overwriting
       the manual price/date_priced fields you enter yourself.
+    - Same source preference as the card-detail lookup above: real eBay
+      Marketplace Insights API data (actual sold listings) if configured
+      AND your application has that API enabled -- see ebay_api.py's
+      module docstring, it's not automatic on every developer account --
+      else Claude's web_search tool steered at eBay's sold/completed
+      listings, run across several query variations to reduce (not
+      eliminate) the gap vs. manually searching eBay yourself. Which
+      source was actually used is recorded in estimated_price_source.
 """
 import os
 
 import anthropic
 
 import db
+import ebay_api
 
 LOOKUP_FILLABLE_FIELDS = ["card_number", "team", "parallel_insert_type"]
 KEY_CONFIDENCE_THRESHOLD = 0.85  # player/set/year must be at least this confident to trust as a lookup key
@@ -111,15 +123,31 @@ def _lookup_key(player_name: str, set_name: str, year: str | None, target_field:
     return f"{player_name.lower()}|{set_name.lower()}|{year or ''}|{target_field}"
 
 
+def _format_ebay_api_results(items: list[dict], sold: bool) -> str:
+    """Turn real eBay API results (ebay_api.search_active_listings /
+    search_sold_listings) into the same kind of plain-text summary the
+    web_search research call would otherwise produce, so both paths feed
+    the identical structured-extraction step below."""
+    kind = "sold" if sold else "active"
+    lines = [f"Found {len(items)} real eBay {kind} listings via the eBay API:"]
+    for i, item in enumerate(items, 1):
+        price = f"${item['price']:.2f}" if item.get("price") is not None else "price unknown"
+        condition = item.get("condition") or "condition unspecified"
+        extra = f", sold {item['sold_date']}" if sold and item.get("sold_date") else ""
+        lines.append(f"{i}. \"{item.get('title') or ''}\" -- {price}, {condition}{extra}")
+    return "\n".join(lines)
+
+
 def _web_lookup_checklist(
     player_name: str, set_name: str, year: str | None, known_card_number: str | None
-) -> dict | None:
-    """Two-call pattern: (1) let Claude research with the web_search tool
-    and summarize in free text, citations and all; (2) force a second call
-    to turn that summary into structured output. Keeps the structured
-    result reliable without fighting the server tool for control of the
-    first call's tool_choice. Returns a dict of found fields, or None on
-    any API failure (never raises -- see enrich_fields, this must fail
+) -> tuple[dict, str] | None:
+    """Prefers real eBay API data (Browse API, active listings) when
+    EBAY_CLIENT_ID/EBAY_CLIENT_SECRET are configured; falls back to
+    Claude's web_search tool steered at eBay when not configured or when
+    the API call fails/returns nothing. Either way, the raw material is
+    handed to the same forced-structured-output call so the result shape
+    doesn't depend on which source was used. Returns (fields_dict, source)
+    or None on failure (never raises -- see enrich_fields, must fail
     soft)."""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -130,33 +158,43 @@ def _web_lookup_checklist(
     if known_card_number:
         card_desc += f", card number {known_card_number}"
 
+    source = "web_lookup"
+    summary = None
+
+    if ebay_api.configured():
+        items = ebay_api.search_active_listings(card_desc)
+        if items:
+            summary = _format_ebay_api_results(items, sold=False)
+            source = "ebay_api_lookup"
+
     try:
-        research = client.messages.create(
-            model=ENRICH_MODEL,
-            max_tokens=1024,
-            tools=[{"type": WEB_SEARCH_TOOL_TYPE, "name": "web_search", "max_uses": 3}],
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"Research this specific trading card: {card_desc}. "
-                        "Search eBay.com for CURRENT/active listings of this exact card "
-                        "(site:ebay.com or ebay.com search results) -- listing titles for "
-                        "this kind of card reliably include the card number, team, and "
-                        "parallel/insert type. Cross-reference a few listings rather than "
-                        "trusting just one, since individual sellers sometimes mistitle "
-                        "listings. Find its card number, the player's team as printed on "
-                        "this specific card/set, and its parallel/insert type (e.g. 'Base' "
-                        "for a standard card, or the parallel name like 'Refractor'). "
-                        "Summarize exactly what you found, and say clearly if you couldn't "
-                        "confirm something specific to this card (don't guess)."
-                    ),
-                }
-            ],
-        )
-        summary = "".join(block.text for block in research.content if block.type == "text")
-        if not summary.strip():
-            return None
+        if summary is None:
+            research = client.messages.create(
+                model=ENRICH_MODEL,
+                max_tokens=1024,
+                tools=[{"type": WEB_SEARCH_TOOL_TYPE, "name": "web_search", "max_uses": 3}],
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Research this specific trading card: {card_desc}. "
+                            "Search eBay.com for CURRENT/active listings of this exact card "
+                            "(site:ebay.com or ebay.com search results) -- listing titles for "
+                            "this kind of card reliably include the card number, team, and "
+                            "parallel/insert type. Cross-reference a few listings rather than "
+                            "trusting just one, since individual sellers sometimes mistitle "
+                            "listings. Find its card number, the player's team as printed on "
+                            "this specific card/set, and its parallel/insert type (e.g. 'Base' "
+                            "for a standard card, or the parallel name like 'Refractor'). "
+                            "Summarize exactly what you found, and say clearly if you couldn't "
+                            "confirm something specific to this card (don't guess)."
+                        ),
+                    }
+                ],
+            )
+            summary = "".join(block.text for block in research.content if block.type == "text")
+            if not summary.strip():
+                return None
 
         structured = client.messages.create(
             model=ENRICH_MODEL,
@@ -186,7 +224,7 @@ def _web_lookup_checklist(
         for k, v in tool_use_block.input.items()
         if k in ("card_number", "team", "parallel_insert_type") and v and v.lower() != "unknown"
     }
-    return result or None
+    return (result, source) if result else None
 
 
 def enrich_fields(fields: dict) -> dict:
@@ -253,10 +291,11 @@ def _enrich_fields_inner(fields: dict) -> dict:
         if db.has_attempted_web_lookup(lookup_key):
             continue  # already tried this exact combo before -- don't re-spend on it
 
-        found = _web_lookup_checklist(player_name, set_name, year_value, known_card_number)
-        db.log_web_lookup(lookup_key, found is not None)
-        if not found:
+        lookup_result = _web_lookup_checklist(player_name, set_name, year_value, known_card_number)
+        db.log_web_lookup(lookup_key, lookup_result is not None)
+        if not lookup_result:
             continue
+        found, found_source = lookup_result
 
         resolved_card_number = found.get("card_number") or known_card_number
         if not resolved_card_number:
@@ -268,13 +307,13 @@ def _enrich_fields_inner(fields: dict) -> dict:
             resolved_card_number,
             team=found.get("team"),
             parallel_insert_type=found.get("parallel_insert_type"),
-            source="web_lookup",
+            source=found_source,
             verified=False,
         )
 
         if target in found:
             target_field["value"] = found[target]
-            target_field["source"] = "web_lookup"
+            target_field["source"] = found_source
             target_field["confidence"] = WEB_LOOKUP_CONFIDENCE
 
     return result
@@ -307,18 +346,22 @@ PRICE_ESTIMATE_TOOL = {
     },
 }
 
-PRICE_ESTIMATE_SOURCE = "ebay_sold_comps"
+PRICE_ESTIMATE_SOURCE_WEBSEARCH = "ebay_websearch_sold_comps"
+PRICE_ESTIMATE_SOURCE_API = "ebay_api_sold_comps"
 
 
 def estimate_price_from_ebay(
     player_name: str, set_name: str, year: str | None, card_number: str | None, condition: str | None
 ) -> dict | None:
-    """On-demand only -- see module docstring. Two-call pattern like
-    _web_lookup_checklist: research via web_search targeted at eBay sold/
-    completed listings, then force structured output. Returns
-    {"estimated_price": float, "caveat": str} (caveat includes the comp
-    count) or None on failure / no usable comps. Never raises -- callers
-    should treat None as "couldn't estimate," not an error."""
+    """Prefers real eBay API data (Marketplace Insights, actual sold
+    listings) when EBAY_CLIENT_ID/EBAY_CLIENT_SECRET are configured AND
+    your application has that API enabled -- not every account does, see
+    ebay_api.py's module docstring. Falls back to Claude's web_search tool
+    when not available. Either way the raw material feeds the same
+    forced-structured-output step. Returns {"estimated_price": float,
+    "caveat": str, "source": str} or None on failure / no usable comps.
+    Never raises -- callers should treat None as "couldn't estimate," not
+    an error."""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         return None
@@ -329,49 +372,59 @@ def estimate_price_from_ebay(
         card_desc += f", card number {card_number}"
     condition_desc = condition if condition and condition != "N/A" else "condition unspecified/unknown"
 
+    source = PRICE_ESTIMATE_SOURCE_WEBSEARCH
+    summary = None
+
+    if ebay_api.configured():
+        items = ebay_api.search_sold_listings(card_desc)
+        if items:
+            summary = _format_ebay_api_results(items, sold=True)
+            source = PRICE_ESTIMATE_SOURCE_API
+
     try:
-        research = client.messages.create(
-            model=ENRICH_MODEL,
-            max_tokens=1536,
-            tools=[{"type": WEB_SEARCH_TOOL_TYPE, "name": "web_search", "max_uses": 8}],
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"Research recent SOLD prices on eBay for this specific trading "
-                        f"card: {card_desc}, condition: {condition_desc}. Search eBay.com "
-                        "sold/completed listings specifically (not active/current "
-                        "listings) -- eBay's sold-listings filter is "
-                        "'LH_Sold=1&LH_Complete=1' in a search URL, or look for listings "
-                        "explicitly marked sold.\n\n"
-                        "A single search query is not enough -- eBay listing titles vary a "
-                        "lot, so run SEVERAL distinct searches before concluding how many "
-                        "comps exist:\n"
-                        "- with and without the card number\n"
-                        "- alternate spellings/capitalization the set or insert name might "
-                        "use (e.g. a two-word insert name might appear as one word, "
-                        "hyphenated, or capitalized differently across listings)\n"
-                        "- alternate year formats (e.g. a two-year season format like "
-                        "'1992-93' might appear as '92-93', '1992', or '1993' in a title)\n"
-                        "- with and without the team name\n"
-                        "Aggregate results across all of these searches into one combined "
-                        "set of comps, not just whichever single search you tried first.\n\n"
-                        "Only use comps that reasonably match the condition given, or note "
-                        "clearly if you had to assume a condition because none was "
-                        "specified. Report the range and a representative typical price "
-                        "you observed, roughly how many comparable sold listings you found "
-                        "in total across all your searches, and any caveats (wide price "
-                        "spread, very few comps, condition mismatch). If you genuinely "
-                        "can't find usable sold comps after trying multiple search "
-                        "variations, say so plainly rather than estimating from a "
-                        "similar-but-different card."
-                    ),
-                }
-            ],
-        )
-        summary = "".join(block.text for block in research.content if block.type == "text")
-        if not summary.strip():
-            return None
+        if summary is None:
+            research = client.messages.create(
+                model=ENRICH_MODEL,
+                max_tokens=1536,
+                tools=[{"type": WEB_SEARCH_TOOL_TYPE, "name": "web_search", "max_uses": 8}],
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Research recent SOLD prices on eBay for this specific trading "
+                            f"card: {card_desc}, condition: {condition_desc}. Search eBay.com "
+                            "sold/completed listings specifically (not active/current "
+                            "listings) -- eBay's sold-listings filter is "
+                            "'LH_Sold=1&LH_Complete=1' in a search URL, or look for listings "
+                            "explicitly marked sold.\n\n"
+                            "A single search query is not enough -- eBay listing titles vary a "
+                            "lot, so run SEVERAL distinct searches before concluding how many "
+                            "comps exist:\n"
+                            "- with and without the card number\n"
+                            "- alternate spellings/capitalization the set or insert name might "
+                            "use (e.g. a two-word insert name might appear as one word, "
+                            "hyphenated, or capitalized differently across listings)\n"
+                            "- alternate year formats (e.g. a two-year season format like "
+                            "'1992-93' might appear as '92-93', '1992', or '1993' in a title)\n"
+                            "- with and without the team name\n"
+                            "Aggregate results across all of these searches into one combined "
+                            "set of comps, not just whichever single search you tried first.\n\n"
+                            "Only use comps that reasonably match the condition given, or note "
+                            "clearly if you had to assume a condition because none was "
+                            "specified. Report the range and a representative typical price "
+                            "you observed, roughly how many comparable sold listings you found "
+                            "in total across all your searches, and any caveats (wide price "
+                            "spread, very few comps, condition mismatch). If you genuinely "
+                            "can't find usable sold comps after trying multiple search "
+                            "variations, say so plainly rather than estimating from a "
+                            "similar-but-different card."
+                        ),
+                    }
+                ],
+            )
+            summary = "".join(block.text for block in research.content if block.type == "text")
+            if not summary.strip():
+                return None
 
         structured = client.messages.create(
             model=ENRICH_MODEL,
@@ -406,7 +459,7 @@ def estimate_price_from_ebay(
     if comp_count is not None:
         caveat = f"{caveat} (~{comp_count} comps)".strip()
 
-    return {"estimated_price": float(result["estimated_price"]), "caveat": caveat or None}
+    return {"estimated_price": float(result["estimated_price"]), "caveat": caveat or None, "source": source}
 
 
 def learn_from_correction(field: str, corrected_value: str, current_fields: dict) -> None:

@@ -139,10 +139,16 @@ function wirePriceForms(container) {
   });
 }
 
+const PRICE_SOURCE_LABELS = {
+  ebay_api_sold_comps: "via eBay API, real sold comps",
+  ebay_websearch_sold_comps: "via web search, may undercount",
+};
+
 function estimateLineHtml(card) {
   if (card.estimated_price == null) return `<small class="hint">No eBay estimate yet.</small>`;
+  const sourceLabel = PRICE_SOURCE_LABELS[card.estimated_price_source] || card.estimated_price_source || "";
   const caveat = card.estimated_price_caveat ? ` <small class="hint">${card.estimated_price_caveat}</small>` : "";
-  return `<strong>eBay estimate:</strong> $${Number(card.estimated_price).toFixed(2)} (as of ${card.estimated_price_date})${caveat}`;
+  return `<strong>eBay estimate:</strong> $${Number(card.estimated_price).toFixed(2)} (as of ${card.estimated_price_date}) <small class="hint">[${sourceLabel}]</small>${caveat}`;
 }
 
 function estimateFormHtml(card) {
@@ -195,7 +201,7 @@ async function loadReviewList() {
       const canon = f.canonical_value
         ? ` <small class="hint">≈ ${f.canonical_value} (${Math.round(f.canonical_score)}% match)</small>`
         : "";
-      const sourceLabels = { local_lookup: "from your checklist", web_lookup: "from web lookup, unconfirmed", human_review: "human-confirmed" };
+      const sourceLabels = { local_lookup: "from your checklist", web_lookup: "from web lookup, unconfirmed", ebay_api_lookup: "from eBay API, unconfirmed", human_review: "human-confirmed" };
       const source = f.source
         ? ` <small class="hint">[${sourceLabels[f.source] || f.source}]</small>`
         : "";

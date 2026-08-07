@@ -9,6 +9,9 @@ extracts structured fields, low-confidence fields get flagged for review.
 
 - Python 3.10+ (uses `X | None` type hints)
 - An Anthropic API key with vision access
+- Optional: an eBay Developer Program account, for real eBay API data
+  instead of Claude's web-search tool steered at eBay — see "Real eBay API
+  integration" below. Everything works without this; it's an upgrade.
 
 ## Setup
 
@@ -22,7 +25,8 @@ pip install -r requirements.txt
 Copy `.env.example` to `.env` in the `Sports Card Scanner/` root (same folder
 as this README) and fill in `ANTHROPIC_API_KEY` with your real key. `main.py`
 loads it automatically via `python-dotenv` — no need to export it into your
-shell yourself.
+shell yourself. If you have eBay Developer credentials, add
+`EBAY_CLIENT_ID`/`EBAY_CLIENT_SECRET` too (see "Real eBay API integration").
 
 ## Run
 
@@ -48,8 +52,11 @@ field is shown under every scan result for you to fill in manually (see
   "Canonicalization & enrichment" below for how it works.
 - `backend/enrich.py` — fill-in-missing-fields on top of canonicalization:
   looks up low-confidence `card_number`/`team`/`parallel_insert_type` from
-  your own growing checklist first, a live web search second. See
-  "Canonicalization & enrichment" below.
+  your own growing checklist first, then real eBay API data if configured,
+  then a live web search as the last resort. See "Canonicalization &
+  enrichment" below.
+- `backend/ebay_api.py` — real eBay Buy API integration (Browse API +
+  Marketplace Insights), optional. See "Real eBay API integration" below.
 - `backend/db.py` — SQLite (`data/cards.db`), `cards` + `audit` +
   `players` + `sets` + `checklist_entries` + `web_lookup_log` tables
 - `frontend/index.html` — vanilla-JS uploader + review UI, no build step
@@ -101,24 +108,33 @@ of cards, plus non-sports cards and memorabilia" — see [[Hobby Log]]
 1. **Local first.** Checks `checklist_entries` — the real source of truth,
    built entirely from your own scans and review corrections, keyed on
    canonical player + canonical set + card_number.
-2. **Web fallback**, only when the card's *key* fields are solid (canonical
-   player, canonical set, and a confident year — all ≥ 0.85): a second Claude
-   API call, reusing your existing `ANTHROPIC_API_KEY`, using Anthropic's
-   server-side web-search tool steered at **eBay's current/active listings**
-   specifically (listing titles reliably include card number, team, and
-   parallel/insert type; cross-referenced across a few listings rather than
-   trusting one seller's title) for the missing field. Anything found gets
-   written back into `checklist_entries`, so the next card with the same
-   player+set+card_number hits the fast local path instead of searching
-   again.
+2. **Fallback**, only when the card's *key* fields are solid (canonical
+   player, canonical set, and a confident year — all ≥ 0.85): looks up the
+   missing field two possible ways, in order —
+   - **Real eBay data**, via `ebay_api.py`'s Browse API (active listings),
+     if `EBAY_CLIENT_ID`/`EBAY_CLIENT_SECRET` are configured — see "Real
+     eBay API integration" below.
+   - **Claude web search**, steered at eBay's current/active listings
+     (listing titles reliably include card number, team, and
+     parallel/insert type; cross-referenced across a few listings rather
+     than trusting one seller's title), if the real API isn't configured
+     or returned nothing.
+   Either way, the raw material (real listing titles, or Claude's own web
+   research) feeds the same forced-structured-output step, so the result
+   shape is identical regardless of source — only `source` on the field
+   (`ebay_api_lookup` vs `web_lookup`) tells you which one actually found
+   it. Anything found gets written back into `checklist_entries`, so the
+   next card with the same player+set+card_number hits the fast local path
+   instead of searching again.
 3. **Cost cap.** Each unique (player, set, target-field) combo is only ever
-   attempted once via the web (`web_lookup_log`) — duplicate/near-duplicate
-   cards don't re-trigger paid searches for something already known to be
-   missing.
-4. **Trust.** A web-sourced value is written with confidence held at 0.6 —
-   deliberately below the 0.85 review threshold — so it always surfaces once
-   in the "Needs Review" list (labeled "from web lookup, unconfirmed") rather
-   than silently becoming ground truth. Accept it there and it's written as a
+   attempted once via the fallback (`web_lookup_log`) — duplicate/near-
+   duplicate cards don't re-trigger paid searches for something already
+   known to be missing.
+4. **Trust.** A fallback-sourced value (either source) is written with
+   confidence held at 0.6 — deliberately below the 0.85 review threshold —
+   so it always surfaces once in the "Needs Review" list (labeled "from web
+   lookup, unconfirmed" or "from eBay API, unconfirmed") rather than
+   silently becoming ground truth. Accept it there and it's written as a
    *verified* `checklist_entries` row, trusted immediately after that. A
    value pulled from your own already-verified checklist is labeled "from
    your checklist" instead.
@@ -164,24 +180,30 @@ not, since a price search on an unidentified card would be meaningless.
 - Comes back with a `caveat` string (e.g. "only 2 comps found (~2 comps)",
   "condition assumed since not specified") — read it, this is an estimate
   from a handful of comps, not an appraisal.
+- **Two possible sources**, recorded in `estimated_price_source`: real sold
+  comps via `ebay_api.py`'s Marketplace Insights API
+  (`ebay_api_sold_comps`) if configured and enabled for your eBay
+  application, else Claude's web_search tool steered at eBay's sold/
+  completed listings (`ebay_websearch_sold_comps`). The UI shows which one
+  actually produced a given estimate. See "Real eBay API integration"
+  below for setup and for why Marketplace Insights specifically isn't
+  automatic on every account.
 - Fails soft, same as `enrich.py`'s other web lookups: no API key, a bad
   web-search tool version, no usable sold comps found, or a network error
   all just return a "couldn't estimate" response (502) rather than
   breaking anything else on the card.
-- **Known limitation, confirmed against real usage 2026-08-07: this will
-  generally find fewer comps than manually searching eBay yourself.**
-  Claude's web-search tool does a general web search — it finds whatever's
-  been crawled/indexed — not a live, authenticated browse of eBay's
-  dynamically-rendered, session-filtered sold-listings search the way you
-  get by visiting eBay directly. The research prompt now explicitly runs
-  several query variations (with/without card number, alternate year/name
-  formats, with/without team) and aggregates across them rather than
-  stopping at the first search, which should narrow the gap — but it's a
-  structural limitation of steering a general web-search tool at eBay
-  rather than using eBay's own API, not something prompt tuning alone can
-  fully close. If accuracy matters more than the estimate being free/
-  automatic, cross-check against your own manual eBay search, or treat
-  this as a rough starting point rather than a final number.
+- **Known limitation of the web-search fallback specifically, confirmed
+  against real usage 2026-08-07: it generally finds fewer comps than
+  manually searching eBay yourself.** Claude's web-search tool does a
+  general web search — it finds whatever's been crawled/indexed — not a
+  live, authenticated browse of eBay's dynamically-rendered, session-
+  filtered sold-listings search the way you get by visiting eBay directly.
+  The research prompt runs several query variations (with/without card
+  number, alternate year/name formats, with/without team) and aggregates
+  across them, which narrows the gap — but the real eBay API path above is
+  the actual fix for this, not further prompt tuning. If you don't have
+  Marketplace Insights access and accuracy matters more than the estimate
+  being free/automatic, cross-check against your own manual eBay search.
 
 ### Condition (new field on every scan)
 
@@ -202,6 +224,77 @@ a card right after you scan it, or if that card is currently flagged in
 other UI entry point to add/edit its price later — set it right after
 scanning, or query/update `cards.db` directly (see "Where your data lives"
 in [[Sports Card Scanning Hub]]) until a general browse/edit view exists.
+
+## Real eBay API integration (`ebay_api.py`)
+
+Optional upgrade over the Claude-web-search-steered-at-eBay approach above,
+for accounts with an eBay Developer Program account. Real API data is
+preferred automatically wherever it's configured — nothing else changes
+about how you use the app.
+
+### Setup
+
+1. Get your app's keys from [developer.ebay.com](https://developer.ebay.com/)
+   — you need the **Client ID (App ID)** and **Client Secret (Cert ID)**
+   from your application's keyset. Use your **production** keyset, not
+   sandbox — sandbox only returns eBay's fake test data, not real listings.
+2. Add to `Sports Card Scanner/.env` (same file as `ANTHROPIC_API_KEY`, see
+   `.env.example`):
+   ```
+   EBAY_CLIENT_ID=your-app-id
+   EBAY_CLIENT_SECRET=your-cert-id
+   ```
+3. Restart the server. That's it — no code changes needed. `ebay_api.configured()`
+   detects the env vars automatically; `enrich.py` prefers real API data
+   wherever it's available and falls back to Claude web search otherwise.
+
+### The two APIs behave differently — read this before assuming everything works
+
+- **Browse API** (active listings, used for card-detail lookups —
+  card_number/team/parallel_insert_type): generally available to any
+  registered application, no extra approval needed. This part should just
+  work once your credentials are in `.env`.
+- **Marketplace Insights API** (SOLD listings, used for price estimation):
+  **historically requires separate approval in eBay's developer program —
+  not automatically enabled on every account.** Check your application's
+  details on developer.ebay.com to confirm whether Marketplace Insights
+  shows as an available/enabled API. If it's not enabled for your app,
+  `ebay_api.search_sold_listings` will simply return `None` every time
+  (auth succeeds, the call itself fails or comes back empty) and price
+  estimation transparently falls back to the Claude web-search path —
+  nothing breaks, you just don't get the accuracy upgrade for prices
+  specifically. Card-detail lookups via Browse API are unaffected either
+  way.
+
+### Auth model
+
+OAuth 2.0 client-credentials grant (an "Application access token") — no
+per-eBay-account login or user consent flow, since this only ever searches
+public listing data, never touches a specific eBay account or seller
+inventory. Tokens are fetched and cached in memory (`ebay_api._token_cache`),
+refreshed automatically before they expire.
+
+### Verify it's working
+
+Once configured, scan a card and check the `source` field on any filled-in
+`card_number`/`team`/`parallel_insert_type` in the JSON response, or the
+`[from eBay API, unconfirmed]` tag in the review UI — that confirms the
+Browse API path is being used instead of web search. For price, click
+"Estimate Price from eBay" and check whether the tag reads "via eBay API,
+real sold comps" or "via web search, may undercount" — that tells you
+directly whether Marketplace Insights is actually working for your account.
+
+### Caveat
+
+`MARKETPLACE_INSIGHTS_URL` in `ebay_api.py` (a `v1_beta` endpoint) and the
+response shape `search_sold_listings` expects reflect what was documented
+at build time — eBay's Beta APIs are more likely to change shape than
+stable ones. If it stops working, `search_sold_listings` is written to
+treat an unrecognized response as "unavailable" (returns `None`, falls back
+to web search) rather than guessing at a different shape, so a shape change
+degrades gracefully instead of returning wrong data — but it's still worth
+checking eBay's current API docs if this seems to have stopped working
+after previously working.
 
 ## Known simplifications vs. the full recommendations doc
 
@@ -293,6 +386,23 @@ Real usage caught what pre-deploy smoke tests missed:
   also no longer hangs at "Loading…" forever on a failed fetch — it now
   shows the actual error. Verified with a deliberately corrupted row
   alongside a valid one: the valid card now still loads.
+
+**Real eBay API integration (`ebay_api.py`) smoke-tested 2026-08-07**, unit
+level only — no real `EBAY_CLIENT_ID`/`EBAY_CLIENT_SECRET` available in this
+session to test against real eBay data: confirmed every function returns
+`None` cleanly (never raises) when unconfigured; confirmed `_format_ebay_api_results`
+produces the expected summary text from both active and sold-listing shaped
+data, including missing-price/missing-condition items; confirmed that with
+fake credentials configured, a real network/auth attempt against eBay's
+OAuth endpoint still fails soft to `None` rather than raising, whether that
+failure is a connection error or an auth rejection. Re-ran the full existing
+TestClient suite (old-shaped cards, estimate-price gating, full ScanResult
+round-trip) to confirm the internal enrich.py restructuring didn't regress
+anything. **Not yet tested: actual eBay API calls with real credentials** —
+that's on you to verify once your keys are in `.env`; see "Real eBay API
+integration" → "Verify it's working" for how to confirm the `source` tags
+show `ebay_api_lookup`/`ebay_api_sold_comps` instead of the web-search
+fallback values.
 
 **Windows gotcha hit during testing:** `kill $!` from a background-launched
 git-bash job doesn't map to the real Windows PID for a spawned `uvicorn`

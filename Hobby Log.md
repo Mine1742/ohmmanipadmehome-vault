@@ -180,3 +180,45 @@ Both bugs verified fixed with exact repros (an old-shaped card with no
 condition key; a deliberately corrupted row alongside a valid one) before
 pushing. See [[Sports Card Scanning - Build Plan]] and
 `Sports Card Scanner/README.md`'s "Testing status" for full detail.
+
+Owner got an eBay Developer Program account and asked to actually use it,
+following up directly on the "real API vs. web search" tradeoff flagged
+when eBay-targeting was first built. Added `backend/ebay_api.py`: OAuth
+client-credentials auth (a cached "Application access token," no per-user
+eBay login needed since this only searches public listings) + eBay's Browse
+API (active listings) + Marketplace Insights API (sold listings) -- entirely
+optional, additive, and preferred automatically over the existing
+Claude-web-search approach wherever `EBAY_CLIENT_ID`/`EBAY_CLIENT_SECRET`
+are configured. Restructured `enrich.py` so real eBay data and Claude's own
+web research both feed the *same* forced-structured-output step -- only
+where the raw material comes from changes, not the result shape, which kept
+the diff clean and meant the existing test suite mostly just needed
+re-running rather than rewriting.
+
+Flagged clearly, both in code comments and in the README, that the two eBay
+APIs are not equally available: Browse API (card details) works on any
+standard developer account, but Marketplace Insights (sold comps -- the
+actual fix for the price-undercounting problem from the previous entry) has
+historically needed separate approval and isn't automatic. Built
+`search_sold_listings` to treat any unrecognized response shape as
+"unavailable" rather than guessing, so if eBay's beta endpoint shape has
+shifted since this was written, it fails soft into the web-search fallback
+instead of silently returning wrong data.
+
+No real eBay credentials were available in this session to test actual API
+responses -- tested what's testable without them: unconfigured state
+returns `None` everywhere without raising, the eBay-results-to-summary
+formatting function produces correct output for both active/sold shapes
+including missing price/condition fields, and a real network+auth attempt
+against eBay's OAuth endpoint with deliberately fake credentials still fails
+soft to `None` rather than raising (confirmed this actually hit eBay's real
+servers, not just a local exception). Re-ran the full existing TestClient
+suite to confirm the enrich.py restructuring didn't regress the
+already-working paths. Added a "Verify it's working" section to the README
+so the owner can confirm for themselves once real credentials are in
+`.env` -- the review UI now tags every filled-in field and price estimate
+with which source actually produced it (`ebay_api_lookup`/
+`ebay_api_sold_comps` vs. the web-search fallback values), so it's directly
+visible rather than something to guess at. See
+[[Sports Card Scanning - Build Plan]] and `Sports Card Scanner/README.md`'s
+"Real eBay API integration" section for full detail.

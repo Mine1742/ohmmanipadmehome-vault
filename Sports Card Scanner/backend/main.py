@@ -209,7 +209,11 @@ def estimate_price(job_id: str) -> ScanResult:
 
     today = datetime.date.today().isoformat()
     db.set_estimated_price(
-        job_id, result["estimated_price"], today, enrich.PRICE_ESTIMATE_SOURCE, result.get("caveat")
+        job_id,
+        result["estimated_price"],
+        today,
+        result.get("source", enrich.PRICE_ESTIMATE_SOURCE_WEBSEARCH),
+        result.get("caveat"),
     )
     return _row_to_result(db.get_card(job_id))
 

@@ -145,5 +145,27 @@ Outside the original doc's phases (added by direct request)
      tool's `max_uses` from 3 to 8.
   Full detail on all three: `Sports Card Scanner/README.md` → "Testing
   status".
+- **Real eBay API integration — done 2026-08-07.** By direct request, once
+  the owner confirmed they have an eBay Developer Program account.
+  `backend/ebay_api.py`: OAuth client-credentials auth (cached token) +
+  Browse API (active listings) + Marketplace Insights API (sold listings),
+  optional and additive -- everything works unchanged without
+  `EBAY_CLIENT_ID`/`EBAY_CLIENT_SECRET` configured. Wired into `enrich.py`
+  as the preferred source ahead of the Claude-web-search fallback for both
+  card-detail lookups and price estimation; the real API data (or the web
+  search summary, whichever was used) feeds the identical forced-
+  structured-output step either way, so the result shape never depends on
+  source -- only a new `source`/`estimated_price_source` tag does.
+  Explicitly documented that Marketplace Insights (the sold-data half, the
+  actual fix for the price-undercounting issue above) requires separate
+  approval in eBay's developer program and isn't automatic on every
+  account -- Browse API (card details) has no such restriction. Unit-
+  tested (unconfigured state, summary formatting, fail-soft on a real
+  network/auth attempt with fake credentials) plus the full existing
+  TestClient regression suite re-run to confirm the enrich.py
+  restructuring didn't break anything -- **no real eBay credentials were
+  available to test actual API responses**, that's on the owner to verify
+  once configured (README has a "Verify it's working" walkthrough). Full
+  detail: `Sports Card Scanner/README.md` → "Real eBay API integration".
 
 See [[Hobby Log]] for the dated narrative.
