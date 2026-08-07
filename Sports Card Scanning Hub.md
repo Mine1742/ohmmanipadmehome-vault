@@ -6,7 +6,7 @@ Personal hobby project: a mobile-to-backend pipeline that photographs sports car
 
 ## Operating Guide
 
-_Living document — update this section whenever how the program is run, accessed, or reviewed changes. Current as of 2026-08-04, Phase 1 MVP. Full dev-oriented setup/troubleshooting detail lives in `Sports Card Scanner/README.md`; this is the "how do I actually use it" version._
+_Living document — update this section whenever how the program is run, accessed, or reviewed changes. Current as of 2026-08-07 (Phase 1 MVP + canonicalization from Phase 2). Full dev-oriented setup/troubleshooting detail lives in `Sports Card Scanner/README.md`; this is the "how do I actually use it" version._
 
 **Starting the server**
 1. Open a terminal, `cd` into `Sports Card Scanner/backend`
@@ -18,12 +18,18 @@ _Living document — update this section whenever how the program is run, access
 1. With the server running, open http://localhost:8000 in a browser
 2. Drag/drop (or click to select) a front photo — required — and a back photo — optional but recommended if the serial number is on the back
 3. Click "Upload & Scan" — it uploads, then polls automatically until Claude finishes reading the card (a few seconds)
-4. Extracted fields show up as JSON on the page
+4. Extracted fields show up as JSON on the page — `player`/`set` will include `canonical_value`/`canonical_score` if a confident match against your growing reference table was found
 
 **Reviewing flagged cards**
 - Any field the model wasn't confident about (below 0.85) automatically shows up in the "Needs Review" section on the same page, with an editable text box per field
-- Type the correct value and click "Save" next to that field — it updates the record and logs the correction
+- If a field has a canonical match, a "≈ Name (NN% match)" hint shows next to it
+- Type the correct value and click "Save" next to that field — it updates the record, logs the correction, **and teaches the reference table** (see below)
 - A card drops off the review list once all its fields are above the confidence threshold
+
+**How player/set canonicalization works**
+- No external card database is hooked up (no credentials for one) — instead, a local `players`/`sets` reference table in `cards.db` builds itself as you scan: any confidently-extracted player/set becomes a canonical entry, and correcting a flagged field teaches the table the right spelling while remembering the wrong one as an alias
+- This means accuracy improves the more you scan and review — early scans will canonicalize less (the table starts empty), later ones more
+- Full mechanics: `Sports Card Scanner/README.md` → "Canonicalization & enrichment"
 
 **Where your data lives**
 - `Sports Card Scanner/data/cards.db` — SQLite database with every scanned card, its extracted fields, confidence scores, and the raw model response
@@ -40,9 +46,9 @@ _Living document — update this section whenever how the program is run, access
   ```
 
 **Known current limits** (see [[sports_card_scanning_recommendations]] for the full picture)
-- No canonicalization yet — player/team/set are stored as whatever Claude reads, not matched against a reference checklist
+- Canonicalization covers player/set only, not team (team wasn't in the recommendations doc's data model) — and there's no external card database behind it, only the self-assembled local table (see above)
 - No serial-number retry/zoom pass yet — a low-confidence serial number just gets flagged like any other field
-- Only tested against one real card so far — accuracy at volume is unproven
+- Only tested against one real card so far via the actual pipeline — accuracy at volume is unproven. Canonicalization logic itself was verified with a standalone smoke test (see `Sports Card Scanner/README.md`), not yet through a real scan with a live API key
 
 Recommendations & Architecture
 [[sports_card_scanning_recommendations]]

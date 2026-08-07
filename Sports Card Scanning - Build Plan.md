@@ -27,16 +27,30 @@ Phase 1 – MVP — **scaffolded and smoke-tested 2026-08-04**
 - **Next:** run a few more real cards (foil/parallel, visible serial number)
   to stress the known weak points before scanning the collection for real.
 
-Phase 2 – Accuracy Upgrade — not started
+Phase 2 – Accuracy Upgrade — in progress
+- **Canonicalization — done 2026-08-07.** `backend/canonicalize.py` +
+  `players`/`sets` tables in `db.py`. No external reference API (no
+  credentials for TCG Price Lookup / TCGAPI.net / PSA API) — implements the
+  doc's self-assembled-checklist fallback instead: the table auto-learns
+  from confident extractions and from review corrections (with the
+  original wrong value kept as an alias), matched via RapidFuzz at a 90+
+  score threshold. Wired into both the extraction pipeline
+  (`_run_extraction`) and the review-correction endpoint. Schema/API
+  extended (`FieldValue.canonical_value/_id/_score`) so it's actually
+  visible, not silently dropped by Pydantic; review UI shows a "≈ Name (NN%
+  match)" hint. Logic smoke-tested against a temp DB (self-learn, typo
+  fuzzy-match, low-confidence non-match, correction-teaches-alias, alias
+  resolves on a later scan) — not yet exercised through the real pipeline
+  with a live API key. See `Sports Card Scanner/README.md` →
+  "Canonicalization & enrichment" for full detail, and
+  [[Sports Card Scanning Hub]]'s Operating Guide for the user-facing version.
 - On-device crop/deskew (or just accept as-shot photos if accuracy is already
-  good enough without it — worth checking before building this)
-- Targeted retry/zoom pass for low-confidence fields, especially serial number
-- Canonicalization against a reference table (TCG Price Lookup / TCGAPI.net /
-  self-assembled checklist) with RapidFuzz — `players`/`sets` are currently
-  free text, not normalized
+  good enough without it — worth checking before building this) — not started
+- Targeted retry/zoom pass for low-confidence fields, especially serial
+  number — not started
 - Evaluation set (recommendations doc §6) — 50-100 hand-labeled personal card
   photos, run against Claude/GPT-5/Gemini to confirm Claude is still the right
-  default once real accuracy data exists
+  default once real accuracy data exists — not started
 
 Phase 3 – Production Quality — not started
 - Serial-number OCR fallback (PaddleOCR-VL/GLM-OCR) for cases Claude misses

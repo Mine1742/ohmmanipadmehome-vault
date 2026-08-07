@@ -6,6 +6,9 @@ from pydantic import BaseModel
 class FieldValue(BaseModel):
     value: Optional[str] = None
     confidence: float = 0.0
+    canonical_value: Optional[str] = None
+    canonical_id: Optional[int] = None
+    canonical_score: Optional[float] = None
 
 
 class CardFields(BaseModel):

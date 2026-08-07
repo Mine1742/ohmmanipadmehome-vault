@@ -29,6 +29,23 @@ CREATE TABLE IF NOT EXISTS audit (
     reviewer TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS players (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    canonical_name TEXT NOT NULL UNIQUE,
+    aliases_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS sets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    year TEXT,
+    manufacturer TEXT,
+    aliases_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(name, year)
+);
 """
 
 
@@ -102,6 +119,97 @@ def list_cards(needs_review_only: bool = False) -> list[sqlite3.Row]:
                 "ORDER BY created_at DESC"
             ).fetchall()
         return conn.execute("SELECT * FROM cards ORDER BY created_at DESC").fetchall()
+
+
+def set_field_canonical(
+    job_id: str, field: str, canonical_value: str, canonical_id: int, canonical_score: float
+) -> None:
+    """Patch canonical_value/canonical_id/canonical_score onto an already-saved
+    field, without touching its value/confidence. Used after a review
+    correction teaches the reference table a new canonical spelling, so the
+    corrected card reflects that it's now a confident canonical match too."""
+    with get_conn() as conn:
+        row = conn.execute("SELECT fields_json FROM cards WHERE job_id = ?", (job_id,)).fetchone()
+        if row is None or not row["fields_json"]:
+            return
+        fields = json.loads(row["fields_json"])
+        if field not in fields:
+            return
+        fields[field]["canonical_value"] = canonical_value
+        fields[field]["canonical_id"] = canonical_id
+        fields[field]["canonical_score"] = canonical_score
+        conn.execute(
+            "UPDATE cards SET fields_json = ? WHERE job_id = ?",
+            (json.dumps(fields), job_id),
+        )
+
+
+def list_players() -> list[sqlite3.Row]:
+    with get_conn() as conn:
+        return conn.execute("SELECT * FROM players").fetchall()
+
+
+def list_sets() -> list[sqlite3.Row]:
+    with get_conn() as conn:
+        return conn.execute("SELECT * FROM sets").fetchall()
+
+
+def upsert_player(canonical_name: str) -> sqlite3.Row:
+    """Return the player row with this exact canonical_name, creating it
+    first if it doesn't exist yet."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM players WHERE canonical_name = ?", (canonical_name,)
+        ).fetchone()
+        if row is not None:
+            return row
+        conn.execute("INSERT INTO players (canonical_name) VALUES (?)", (canonical_name,))
+        return conn.execute(
+            "SELECT * FROM players WHERE canonical_name = ?", (canonical_name,)
+        ).fetchone()
+
+
+def add_player_alias(player_id: int, alias: str) -> None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT aliases_json FROM players WHERE id = ?", (player_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"no player with id {player_id}")
+        aliases = json.loads(row["aliases_json"] or "[]")
+        if alias not in aliases:
+            aliases.append(alias)
+            conn.execute(
+                "UPDATE players SET aliases_json = ? WHERE id = ?", (json.dumps(aliases), player_id)
+            )
+
+
+def upsert_set(name: str, year: str | None, manufacturer: str | None = None) -> sqlite3.Row:
+    """Return the set row matching this exact (name, year), creating it
+    first if it doesn't exist yet."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM sets WHERE name = ? AND year IS ?", (name, year)
+        ).fetchone()
+        if row is not None:
+            return row
+        conn.execute(
+            "INSERT INTO sets (name, year, manufacturer) VALUES (?, ?, ?)", (name, year, manufacturer)
+        )
+        return conn.execute(
+            "SELECT * FROM sets WHERE name = ? AND year IS ?", (name, year)
+        ).fetchone()
+
+
+def add_set_alias(set_id: int, alias: str) -> None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT aliases_json FROM sets WHERE id = ?", (set_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"no set with id {set_id}")
+        aliases = json.loads(row["aliases_json"] or "[]")
+        if alias not in aliases:
+            aliases.append(alias)
+            conn.execute(
+                "UPDATE sets SET aliases_json = ? WHERE id = ?", (json.dumps(aliases), set_id)
+            )
 
 
 def apply_review_correction(job_id: str, field: str, old_value: str | None, new_value: str, reviewer: str) -> None:

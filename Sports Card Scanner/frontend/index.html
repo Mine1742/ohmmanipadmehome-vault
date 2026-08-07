@@ -122,10 +122,14 @@ async function loadReviewList() {
     for (const name of FIELD_NAMES) {
       const f = card.fields[name] || { value: "", confidence: 0 };
       const lowClass = f.confidence < CONF_THRESHOLD ? "conf-low" : "";
+      const canon = f.canonical_value
+        ? ` <small class="hint">≈ ${f.canonical_value} (${Math.round(f.canonical_score)}% match)</small>`
+        : "";
       html += `<div class="field-row">
         <span class="name ${lowClass}">${name} (${f.confidence.toFixed(2)})</span>
         <input type="text" value="${(f.value ?? "").replace(/"/g, '&quot;')}" data-field="${name}">
         <button data-save="${name}" data-job="${card.job_id}">Save</button>
+        ${canon}
       </div>`;
     }
     row.innerHTML = html;
