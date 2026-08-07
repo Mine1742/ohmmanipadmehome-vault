@@ -16,15 +16,24 @@ class FieldValue(BaseModel):
 
 
 class CardFields(BaseModel):
-    player: FieldValue
-    team: FieldValue
-    year: FieldValue
-    set: FieldValue
-    card_number: FieldValue
-    serial_number: FieldValue
-    parallel_insert_type: FieldValue
-    notable_flags: FieldValue
-    condition: FieldValue
+    # default_factory=FieldValue (not a bare required field) on every
+    # attribute here on purpose: cards scanned before a field existed (e.g.
+    # `condition`, added 2026-08-07) have no key for it at all in their
+    # stored fields_json. A required field with no default makes Pydantic
+    # reject ANY pre-existing card the moment a new field is added --
+    # exactly the bug that broke /scan/list and /scan/{job_id}/review for
+    # every already-scanned card here. Defaulting to an empty FieldValue
+    # means an old card just shows that field as unset instead of the
+    # whole card failing to load.
+    player: FieldValue = Field(default_factory=FieldValue)
+    team: FieldValue = Field(default_factory=FieldValue)
+    year: FieldValue = Field(default_factory=FieldValue)
+    set: FieldValue = Field(default_factory=FieldValue)
+    card_number: FieldValue = Field(default_factory=FieldValue)
+    serial_number: FieldValue = Field(default_factory=FieldValue)
+    parallel_insert_type: FieldValue = Field(default_factory=FieldValue)
+    notable_flags: FieldValue = Field(default_factory=FieldValue)
+    condition: FieldValue = Field(default_factory=FieldValue)
 
 
 class UploadResponse(BaseModel):
