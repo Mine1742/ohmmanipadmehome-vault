@@ -255,19 +255,24 @@ about how you use the app.
   registered application, no extra approval needed. This part should just
   work once your credentials are in `.env`.
 - **Marketplace Insights API** (SOLD listings, used for price estimation):
-  **requires separate approval in eBay's developer program — confirmed
-  restricted, not automatically enabled on every account (2026-08-07: a
-  real request against production returned `errorId 1100, "Insufficient
-  permissions to fulfill the request"`).** Community reports also indicate
-  this API often isn't granted for individual/hobbyist use cases even when
-  formally requested — it's worth applying for (via eBay's "Application
-  Growth Check" at developer.ebay.com) if you want to try, but don't
-  expect approval. If it's not enabled for your app,
-  `ebay_api.search_sold_listings` returns `None` every time (a clean 403,
-  logged) and price estimation transparently falls back to the Claude
-  web-search path — nothing breaks, you just don't get the accuracy
-  upgrade for prices specifically. **Card-detail lookups via Browse API
-  are completely unaffected either way** — it's a different, unrestricted
+  **confirmed, as of 2026-08-07, effectively closed to new applicants —
+  not just hard to get.** A real production request returned `errorId
+  1100, "Insufficient permissions to fulfill the request"`, and eBay's own
+  current developer documentation states this API is "restricted and not
+  open to new users at this time." There is no working alternative path
+  either: the old Finding API's `findCompletedItems` (which used to offer
+  similar sold-comp search) was fully decommissioned in February 2025, and
+  the Trading/Inventory APIs only expose a seller's *own* listings, not
+  general marketplace sold data — they don't substitute for this. Applying
+  via eBay's "Application Growth Check" is possible if this ever changes,
+  but treat real eBay sold-comp data as unavailable for now rather than
+  something worth continuing to chase. If Marketplace Insights isn't
+  enabled for your app, `ebay_api.search_sold_listings` returns `None`
+  every time (a clean 403, logged) and price estimation transparently
+  falls back to the Claude web-search path — nothing breaks, you just
+  don't get the accuracy upgrade for prices specifically. **Card-detail
+  lookups via Browse API are completely unaffected either way** — it's a
+  different, unrestricted
   API, isolated at the OAuth-scope level (see "Auth model") so a
   Marketplace Insights rejection can never break Browse API lookups.
 

@@ -273,3 +273,17 @@ unapproved or rejected Marketplace Insights scope request can never affect
 the Browse API path that's already working correctly. Verified by spying
 on token requests to confirm each API path requests its own correct scope
 in isolation, plus the existing fail-soft/import checks -- no regressions.
+
+Owner tried eBay's own support chatbot for an alternative, which suggested
+the Trading/Inventory APIs. Checked rather than assume that was a real
+option -- it isn't: those only expose a seller's own listings, not
+marketplace-wide sold data, so they don't substitute for Marketplace
+Insights at all. Researched the broader landscape while at it and found a
+more definitive answer than "hard to get approved": eBay's own current
+docs state Marketplace Insights is "restricted and not open to new users
+at this time," and the old alternative (Finding API's findCompletedItems)
+was fully decommissioned in February 2025. Concluded, and documented
+plainly rather than leaving it as an open "worth trying": real eBay
+sold-comp data isn't obtainable right now for this project, not a matter
+of trying harder. Price estimation stays on the web-search fallback; card
+detail lookups via Browse API are unaffected and keep working well.
