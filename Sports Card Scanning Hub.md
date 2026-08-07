@@ -10,6 +10,7 @@ _Living document — update this section whenever how the program is run, access
 
 **Starting the server**
 1. Open a terminal, `cd` into `Sports Card Scanner/backend`
+		 cd "C:\Users\mine1\OneDrive\Desktop\Obsidian Vaults\Ohmmanipadmehome\Sports Card Scanner\backend"
 2. First time only: `python -m venv .venv` then `.venv\Scripts\activate` then `pip install -r requirements.txt`
 3. Every time: `.venv\Scripts\activate` then `uvicorn main:app --reload --port 8000`
 4. Leave that terminal window open — the server runs as long as it's running. Closing the terminal (or Ctrl+C) stops it.
