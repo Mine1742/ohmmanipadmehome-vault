@@ -55,20 +55,35 @@ TOKEN_URL = f"https://{_HOST}/identity/v1/oauth2/token"
 BROWSE_SEARCH_URL = f"https://{_HOST}/buy/browse/v1/item_summary/search"
 MARKETPLACE_INSIGHTS_URL = f"https://{_HOST}/buy/marketplace_insights/v1_beta/item_sales/search"
 
-_token_cache = {"token": None, "expires_at": 0.0}
+# Browse API only needs the base scope. Marketplace Insights needs this
+# ADDITIONAL scope explicitly requested -- an app without it granted will
+# get an auth/permission error using it, same as not requesting it at all,
+# so it's always safe to request. Kept as a SEPARATE token request (own
+# cache entry, own failure handling) rather than folding both scopes into
+# one request: if an unapproved MI scope ever caused eBay to reject the
+# whole token request instead of just omitting that scope, sharing one
+# token would break the (working, unrestricted) Browse API path too.
+BASE_SCOPE = "https://api.ebay.com/oauth/api_scope"
+MARKETPLACE_INSIGHTS_SCOPE = "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"
+
+_token_cache: dict[str, dict] = {}
 
 
 def configured() -> bool:
     return bool(CLIENT_ID and CLIENT_SECRET)
 
 
-def _get_token() -> str | None:
-    """Cached OAuth client-credentials token. Returns None on any failure
-    -- callers must treat that the same as "not configured", never raise."""
+def _get_token(scope: str = BASE_SCOPE) -> str | None:
+    """Cached OAuth client-credentials token for the given scope. Returns
+    None on any failure -- callers must treat that the same as "not
+    configured", never raise. Scoped separately per `scope` -- see the
+    module-level comment above BASE_SCOPE/MARKETPLACE_INSIGHTS_SCOPE for
+    why this matters."""
     if not configured():
         return None
-    if _token_cache["token"] and time.time() < _token_cache["expires_at"] - 60:
-        return _token_cache["token"]
+    cached = _token_cache.get(scope)
+    if cached and time.time() < cached["expires_at"] - 60:
+        return cached["token"]
 
     creds = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
     try:
@@ -78,35 +93,31 @@ def _get_token() -> str | None:
                 "Authorization": f"Basic {creds}",
                 "Content-Type": "application/x-www-form-urlencoded",
             },
-            data={
-                "grant_type": "client_credentials",
-                "scope": "https://api.ebay.com/oauth/api_scope",
-            },
+            data={"grant_type": "client_credentials", "scope": scope},
             timeout=10,
         )
         resp.raise_for_status()
         data = resp.json()
     except requests.RequestException as exc:
-        print(f"[ebay_api] OAuth token request failed: {exc}")
+        print(f"[ebay_api] OAuth token request failed (scope={scope}): {exc}")
         return None
 
     token = data.get("access_token")
     if not token:
-        print(f"[ebay_api] OAuth response had no access_token: {data}")
+        print(f"[ebay_api] OAuth response had no access_token (scope={scope}): {data}")
         return None
-    _token_cache["token"] = token
-    _token_cache["expires_at"] = time.time() + data.get("expires_in", 7200)
+    _token_cache[scope] = {"token": token, "expires_at": time.time() + data.get("expires_in", 7200)}
     return token
 
 
-def _get(url: str, params: dict) -> dict | None:
+def _get(url: str, params: dict, scope: str = BASE_SCOPE) -> dict | None:
     """Every failure path prints why -- ebay_api fails soft to enrich.py's
     caller either way, but a silent None gives you no way to tell "not
     enabled for your app" (403) apart from "genuinely no results" (200,
     empty) apart from "wrong endpoint/shape" (200, unexpected JSON) apart
     from a network problem. Check the server terminal after a call to see
     which one actually happened."""
-    token = _get_token()
+    token = _get_token(scope)
     if not token:
         return None
     try:
@@ -167,7 +178,7 @@ def search_sold_listings(query: str, limit: int = 25) -> list[dict] | None:
     your app, not configured, auth failure, or a response shape this
     wasn't written against. Callers should silently fall back to another
     approach; None here is not an error worth surfacing to the user."""
-    data = _get(MARKETPLACE_INSIGHTS_URL, {"q": query, "limit": limit})
+    data = _get(MARKETPLACE_INSIGHTS_URL, {"q": query, "limit": limit}, scope=MARKETPLACE_INSIGHTS_SCOPE)
     if data is None:
         return None
     items = data.get("itemSales")

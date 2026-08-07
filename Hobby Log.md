@@ -255,3 +255,21 @@ sitting in the review list -- the cache-key fix helps future lookups, not
 retroactively fixing a field already stuck on a card scanned before
 credentials existed; a manual correction is the practical fix for those,
 and it teaches the checklist table too.
+
+The new diagnostic logging paid off immediately: the owner's server log
+showed a Marketplace Insights call returning `errorId 1100, "Insufficient
+permissions to fulfill the request"` on the very first real attempt.
+Researched it rather than guessing -- confirmed this is a real, restricted
+API requiring separate eBay approval, and found community reports that
+individual/hobbyist accounts often don't get approved even after applying,
+so set honest expectations rather than promising this would resolve
+itself. Also found and fixed a genuine bug while researching: `_get_token`
+was only ever requesting the base OAuth scope, never the additional
+`buy.marketplace.insights` scope Marketplace Insights actually requires --
+so even an *approved* account would have failed the exact same way. Fixed
+by giving Marketplace Insights its own scope-specific token request and
+cache entry, deliberately isolated from the Browse API's token/scope so an
+unapproved or rejected Marketplace Insights scope request can never affect
+the Browse API path that's already working correctly. Verified by spying
+on token requests to confirm each API path requests its own correct scope
+in isolation, plus the existing fail-soft/import checks -- no regressions.

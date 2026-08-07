@@ -255,24 +255,35 @@ about how you use the app.
   registered application, no extra approval needed. This part should just
   work once your credentials are in `.env`.
 - **Marketplace Insights API** (SOLD listings, used for price estimation):
-  **historically requires separate approval in eBay's developer program —
-  not automatically enabled on every account.** Check your application's
-  details on developer.ebay.com to confirm whether Marketplace Insights
-  shows as an available/enabled API. If it's not enabled for your app,
-  `ebay_api.search_sold_listings` will simply return `None` every time
-  (auth succeeds, the call itself fails or comes back empty) and price
-  estimation transparently falls back to the Claude web-search path —
-  nothing breaks, you just don't get the accuracy upgrade for prices
-  specifically. Card-detail lookups via Browse API are unaffected either
-  way.
+  **requires separate approval in eBay's developer program — confirmed
+  restricted, not automatically enabled on every account (2026-08-07: a
+  real request against production returned `errorId 1100, "Insufficient
+  permissions to fulfill the request"`).** Community reports also indicate
+  this API often isn't granted for individual/hobbyist use cases even when
+  formally requested — it's worth applying for (via eBay's "Application
+  Growth Check" at developer.ebay.com) if you want to try, but don't
+  expect approval. If it's not enabled for your app,
+  `ebay_api.search_sold_listings` returns `None` every time (a clean 403,
+  logged) and price estimation transparently falls back to the Claude
+  web-search path — nothing breaks, you just don't get the accuracy
+  upgrade for prices specifically. **Card-detail lookups via Browse API
+  are completely unaffected either way** — it's a different, unrestricted
+  API, isolated at the OAuth-scope level (see "Auth model") so a
+  Marketplace Insights rejection can never break Browse API lookups.
 
 ### Auth model
 
 OAuth 2.0 client-credentials grant (an "Application access token") — no
 per-eBay-account login or user consent flow, since this only ever searches
 public listing data, never touches a specific eBay account or seller
-inventory. Tokens are fetched and cached in memory (`ebay_api._token_cache`),
-refreshed automatically before they expire.
+inventory. Browse API and Marketplace Insights each get their **own**
+token request, with their own OAuth scope (`.../api_scope` vs
+`.../api_scope/buy.marketplace.insights`) and own cache entry — Marketplace
+Insights needs that extra scope explicitly requested, and keeping the two
+separate means a rejected/unapproved Marketplace Insights scope can never
+take down the Browse API token that's already working. Tokens are cached
+in memory (`ebay_api._token_cache`, one entry per scope), refreshed
+automatically before they expire.
 
 ### Verify it's working
 
@@ -446,6 +457,24 @@ silent) so a stuck field or an estimate still falling back to web search
 is debuggable from the server terminal instead of a guess — see "Real eBay
 API integration" → "Verify it's working". Re-ran the full TestClient
 regression suite; no regressions.
+
+**Marketplace Insights OAuth scope bug found and fixed, 2026-08-07** — the
+new diagnostic logging immediately paid off: the owner's server log showed
+`errorId 1100, "Insufficient permissions to fulfill the request"` on the
+first real Marketplace Insights call. Partly a real access restriction
+(confirmed via research — see "The two APIs behave differently" above),
+but also exposed a genuine bug: `_get_token` was only ever requesting the
+base OAuth scope, never the additional
+`.../api_scope/buy.marketplace.insights` scope Marketplace Insights
+actually requires — so even an approved account would have failed the same
+way. Fixed by giving Marketplace Insights its own scope-specific token
+request and cache entry, isolated from the Browse API's token so an
+unapproved/rejected scope can never affect the (already working) Browse
+API path. Verified by spying on `_get_token` calls: confirmed
+`search_active_listings` requests the base scope and `search_sold_listings`
+requests the Marketplace Insights scope, in isolation. Re-ran the
+unconfigured-state fail-soft checks and the full app import — no
+regressions.
 
 **Windows gotcha hit during testing:** `kill $!` from a background-launched
 git-bash job doesn't map to the real Windows PID for a spawned `uvicorn`
