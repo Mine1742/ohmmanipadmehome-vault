@@ -142,3 +142,41 @@ functions directly. The live eBay web-search call itself is still untested
 with a real API key, same open item as the rest of `enrich.py`. See
 [[Sports Card Scanning - Build Plan]] and `Sports Card Scanner/README.md` for
 full detail.
+
+First real usage (owner scanning actual cards) surfaced three issues the
+smoke tests above didn't catch, all fixed same day:
+
+1. Server crash confirmed directly from the owner's error log: `CardFields.
+   condition` had no default, so any card scanned before `condition` existed
+   (no key for it in stored fields_json) broke Pydantic validation entirely --
+   500'd `GET /scan/list` and `POST /scan/{job_id}/review` for every
+   pre-existing card. Root cause: my smoke tests only ever built fresh field
+   dicts that included every field, so they never exercised what loading back
+   *real, older* data actually looks like. Fixed by giving every `CardFields`
+   attribute a `default_factory=FieldValue` instead of a bare required type --
+   a missing key now just shows as unset instead of failing the whole card,
+   which also forecloses the same bug for any future field addition.
+2. Related, worse compounding bug: `/scan/list` validated every row inline,
+   so ONE broken card's error took the entire review list down with it --
+   this is almost certainly why the owner reported losing the ability to
+   edit/confirm fields at all, not just for one card. Fixed by catching and
+   skipping a bad row per-card rather than failing the whole request, and
+   made the frontend surface a real error instead of hanging at "Loading…"
+   forever on a failed fetch -- that silent-hang behavior is exactly what
+   made the first bug invisible instead of obviously broken.
+3. The eBay price estimate found fewer comps than the owner got searching
+   eBay manually (1-2 comps automated vs. many by hand). Real, structural
+   limitation, not a simple bug: Claude's web-search tool does a general web
+   search (whatever's crawled/indexed), not a live authenticated eBay
+   session with dynamic sold-listings filtering. Narrowed by having the
+   research prompt explicitly run several query variations (with/without
+   card number, alternate year/name formats) and aggregate across them
+   rather than stopping at one search, and by raising the web-search tool's
+   max_uses from 3 to 8 -- but said clearly in the docs that this can't be
+   fully closed without switching to eBay's actual API, which was already
+   flagged as the honest tradeoff when this was built.
+
+Both bugs verified fixed with exact repros (an old-shaped card with no
+condition key; a deliberately corrupted row alongside a valid one) before
+pushing. See [[Sports Card Scanning - Build Plan]] and
+`Sports Card Scanner/README.md`'s "Testing status" for full detail.

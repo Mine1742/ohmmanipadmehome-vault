@@ -332,8 +332,8 @@ def estimate_price_from_ebay(
     try:
         research = client.messages.create(
             model=ENRICH_MODEL,
-            max_tokens=1024,
-            tools=[{"type": WEB_SEARCH_TOOL_TYPE, "name": "web_search", "max_uses": 3}],
+            max_tokens=1536,
+            tools=[{"type": WEB_SEARCH_TOOL_TYPE, "name": "web_search", "max_uses": 8}],
             messages=[
                 {
                     "role": "user",
@@ -343,14 +343,28 @@ def estimate_price_from_ebay(
                         "sold/completed listings specifically (not active/current "
                         "listings) -- eBay's sold-listings filter is "
                         "'LH_Sold=1&LH_Complete=1' in a search URL, or look for listings "
-                        "explicitly marked sold. Only use comps that reasonably match the "
-                        "condition given, or note clearly if you had to assume a condition "
-                        "because none was specified. Report the range and a representative "
-                        "typical price you observed, roughly how many comparable sold "
-                        "listings you found, and any caveats (wide price spread, very few "
-                        "comps, condition mismatch). If you can't find usable sold comps "
-                        "for this specific card, say so plainly rather than estimating from "
-                        "a similar-but-different card."
+                        "explicitly marked sold.\n\n"
+                        "A single search query is not enough -- eBay listing titles vary a "
+                        "lot, so run SEVERAL distinct searches before concluding how many "
+                        "comps exist:\n"
+                        "- with and without the card number\n"
+                        "- alternate spellings/capitalization the set or insert name might "
+                        "use (e.g. a two-word insert name might appear as one word, "
+                        "hyphenated, or capitalized differently across listings)\n"
+                        "- alternate year formats (e.g. a two-year season format like "
+                        "'1992-93' might appear as '92-93', '1992', or '1993' in a title)\n"
+                        "- with and without the team name\n"
+                        "Aggregate results across all of these searches into one combined "
+                        "set of comps, not just whichever single search you tried first.\n\n"
+                        "Only use comps that reasonably match the condition given, or note "
+                        "clearly if you had to assume a condition because none was "
+                        "specified. Report the range and a representative typical price "
+                        "you observed, roughly how many comparable sold listings you found "
+                        "in total across all your searches, and any caveats (wide price "
+                        "spread, very few comps, condition mismatch). If you genuinely "
+                        "can't find usable sold comps after trying multiple search "
+                        "variations, say so plainly rather than estimating from a "
+                        "similar-but-different card."
                     ),
                 }
             ],

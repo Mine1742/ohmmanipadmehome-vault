@@ -173,8 +173,15 @@ function wireEstimateForms(container) {
 
 async function loadReviewList() {
   const listDiv = document.getElementById("reviewList");
-  const res = await fetch("/scan/list?needs_review=true");
-  const cards = await res.json();
+  let cards;
+  try {
+    const res = await fetch("/scan/list?needs_review=true");
+    if (!res.ok) throw new Error(`server returned ${res.status}`);
+    cards = await res.json();
+  } catch (err) {
+    listDiv.innerHTML = `<small class="hint">Couldn't load the review list (${err.message}). Check the server's terminal for details, then reload this page.</small>`;
+    return;
+  }
   if (!cards.length) { listDiv.innerHTML = "<small class='hint'>Nothing flagged for review.</small>"; return; }
 
   listDiv.innerHTML = "";

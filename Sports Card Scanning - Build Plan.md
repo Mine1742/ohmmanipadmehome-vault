@@ -123,9 +123,27 @@ Outside the original doc's phases (added by direct request)
   (`POST /scan/{job_id}/estimate-price`), gated on player/set/year already
   being confidently known. New endpoint + the full pipeline verified with a
   real `fastapi.testclient.TestClient` run (400/502/404 gating all correct,
-  full `ScanResult` round-trip) -- the actual live eBay web-search call
-  itself is still untested with a real API key, same open item as the rest
-  of `enrich.py`. Full detail: `Sports Card Scanner/README.md` → "Price
-  tracking".
+  full `ScanResult` round-trip).
+- **Real-usage fixes — done 2026-08-07.** First live use surfaced three
+  real issues beyond what pre-deploy smoke tests caught:
+  1. `CardFields.condition` had no default, so every card scanned before
+     `condition` existed broke on load (500 on `/scan/list` and
+     `/scan/{job_id}/review`) -- fixed with `default_factory=FieldValue`
+     on every `CardFields` attribute.
+  2. `/scan/list` validated rows inline, so that one broken card's error
+     took the *entire* review list down with it, hiding the edit/confirm
+     UI for every card -- fixed by catching and skipping a bad row
+     per-card instead of failing the whole request; the frontend also no
+     longer hangs at "Loading…" forever on a failed fetch.
+  3. The eBay price estimate found meaningfully fewer comps than manually
+     searching eBay -- a real, structural limitation of steering a
+     general web-search tool at eBay rather than eBay's own live sold-
+     listings search, not something prompt tuning alone fully closes.
+     Narrowed (not eliminated) by having the research prompt run several
+     query variations (with/without card number, alternate year/name
+     formats) and aggregate across them, and by raising the web-search
+     tool's `max_uses` from 3 to 8.
+  Full detail on all three: `Sports Card Scanner/README.md` → "Testing
+  status".
 
 See [[Hobby Log]] for the dated narrative.

@@ -110,7 +110,19 @@ def get_scan_result(job_id: str) -> ScanResult:
 
 @app.get("/scan/list")
 def list_scans(needs_review: bool = False) -> list[ScanResult]:
-    return [_row_to_result(row) for row in db.list_cards(needs_review_only=needs_review)]
+    """A single malformed/legacy row (an old scan whose stored shape some
+    future schema change doesn't anticipate) must never be able to take
+    down the whole list -- that would silently hide every other card's
+    review/edit UI behind one bad row. Skip and log instead of failing the
+    whole request; the review UI, not a 500 page, is what should surface
+    a problem with one specific card."""
+    results = []
+    for row in db.list_cards(needs_review_only=needs_review):
+        try:
+            results.append(_row_to_result(row))
+        except Exception as exc:
+            print(f"[scan/list] skipping job {row['job_id']}: {exc}")
+    return results
 
 
 @app.post("/scan/{job_id}/review")

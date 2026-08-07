@@ -168,6 +168,20 @@ not, since a price search on an unidentified card would be meaningless.
   web-search tool version, no usable sold comps found, or a network error
   all just return a "couldn't estimate" response (502) rather than
   breaking anything else on the card.
+- **Known limitation, confirmed against real usage 2026-08-07: this will
+  generally find fewer comps than manually searching eBay yourself.**
+  Claude's web-search tool does a general web search — it finds whatever's
+  been crawled/indexed — not a live, authenticated browse of eBay's
+  dynamically-rendered, session-filtered sold-listings search the way you
+  get by visiting eBay directly. The research prompt now explicitly runs
+  several query variations (with/without card number, alternate year/name
+  formats, with/without team) and aggregates across them rather than
+  stopping at the first search, which should narrow the gap — but it's a
+  structural limitation of steering a general web-search tool at eBay
+  rather than using eBay's own API, not something prompt tuning alone can
+  fully close. If accuracy matters more than the estimate being free/
+  automatic, cross-check against your own manual eBay search, or treat
+  this as a rough starting point rather than a final number.
 
 ### Condition (new field on every scan)
 
@@ -254,6 +268,31 @@ an unknown job, and confirmed a full `ScanResult` round-trip includes all
 four new estimated-price fields. **Still not tested: an actual eBay
 sold-listings search with a live API key** — same open item as the rest of
 the web-lookup path.
+
+**Two real bugs found and fixed via actual usage, 2026-08-07 (post-deploy).**
+Real usage caught what pre-deploy smoke tests missed:
+
+- `CardFields.condition` was a required field with no default. Every card
+  scanned *before* `condition` existed had no key for it in its stored
+  `fields_json`, so Pydantic rejected the card outright the moment this was
+  deployed — broke `GET /scan/list` and `POST /scan/{job_id}/review` (500)
+  for every pre-existing card, confirmed directly from the running
+  server's error log. Fixed by giving every `CardFields` attribute a
+  `default_factory=FieldValue` instead of a bare required type, so a
+  missing key just shows that field as unset rather than failing to load
+  the whole card — also closes off the same bug for any future field
+  addition, not just this one. Verified against an exact repro of the
+  broken card.
+- `GET /scan/list` validated every returned row through `CardFields`
+  inline — a single malformed/legacy row would take the *entire* list
+  down with it, silently hiding the review/edit UI for every other card
+  too (this is very likely what caused the `condition` bug above to look
+  like "the whole review list vanished" rather than "one old card is
+  broken"). Fixed by catching per-row and skipping/logging a bad row
+  instead of failing the whole request. The frontend's `loadReviewList()`
+  also no longer hangs at "Loading…" forever on a failed fetch — it now
+  shows the actual error. Verified with a deliberately corrupted row
+  alongside a valid one: the valid card now still loads.
 
 **Windows gotcha hit during testing:** `kill $!` from a background-launched
 git-bash job doesn't map to the real Windows PID for a spawned `uvicorn`
