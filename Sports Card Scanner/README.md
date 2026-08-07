@@ -284,6 +284,33 @@ Browse API path is being used instead of web search. For price, click
 real sold comps" or "via web search, may undercount" — that tells you
 directly whether Marketplace Insights is actually working for your account.
 
+**Check the server terminal too.** `ebay_api.py` logs every failure with a
+reason (`[ebay_api] GET ... returned 403: ...`, an OAuth token failure, an
+unrecognized response shape) rather than failing completely silently, and
+`enrich.py` logs how many real listings each lookup actually found
+(`[enrich] Browse API for '...': N listings`). If a field or estimate keeps
+falling back to web search, this is where to look first — it tells you
+*why* (not enabled for your app, wrong credentials, genuinely zero results,
+etc.) instead of leaving you guessing.
+
+**Important caching gotcha if you're adding eBay credentials to an app
+that's already been scanning cards:** card-detail lookups (not price
+estimates — those aren't cached) that already failed once under the
+web-search-only fallback are cached as "don't retry" per player+set+
+year+field. This cache is now keyed to include whether eBay API is
+configured, so *future* lookups for a player+set+year+field combo that
+previously failed will get a fresh attempt with the better source instead
+of being blocked forever by the old failure. There's currently no "retry
+enrichment" action for a card already sitting in the review list, though —
+enrichment only runs (a) at scan time, or (b) implicitly, the first time a
+given player+set+year+field combo is looked up under a given source tier.
+So a field that's *already* stuck unfilled on a card you scanned before
+adding credentials won't retroactively fill itself in on that same card;
+the practical fix for one already-stuck card is to type the correct value
+in yourself (a human correction) — which also teaches the checklist table,
+so the *next* card with that same player+set+card_number resolves
+instantly from the local cache either way.
+
 ### Caveat
 
 `MARKETPLACE_INSIGHTS_URL` in `ebay_api.py` (a `v1_beta` endpoint) and the
@@ -403,6 +430,22 @@ that's on you to verify once your keys are in `.env`; see "Real eBay API
 integration" → "Verify it's working" for how to confirm the `source` tags
 show `ebay_api_lookup`/`ebay_api_sold_comps` instead of the web-search
 fallback values.
+
+**Real eBay credentials added and used for the first time, 2026-08-07** —
+surfaced a real gap: `card_number` stayed unfilled on a card despite
+player/set/year all being confidently known and eBay credentials now being
+configured. Root cause: `web_lookup_log`'s "attempt once ever" cache was
+keyed only by player+set+year+field, not by which lookup *source* was
+tried — a failed attempt from before eBay credentials existed permanently
+blocked a retry with the new, better source. Fixed by including whether
+eBay API is configured in the cache key, verified with a direct repro
+(logging a failed web-search-tier attempt, then confirming the eBay-tier
+key is untouched/retryable). Also added diagnostic logging throughout
+`ebay_api.py` and `enrich.py` (previously every failure was completely
+silent) so a stuck field or an estimate still falling back to web search
+is debuggable from the server terminal instead of a guess — see "Real eBay
+API integration" → "Verify it's working". Re-ran the full TestClient
+regression suite; no regressions.
 
 **Windows gotcha hit during testing:** `kill $!` from a background-launched
 git-bash job doesn't map to the real Windows PID for a spawned `uvicorn`

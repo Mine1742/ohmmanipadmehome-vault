@@ -86,11 +86,13 @@ def _get_token() -> str | None:
         )
         resp.raise_for_status()
         data = resp.json()
-    except requests.RequestException:
+    except requests.RequestException as exc:
+        print(f"[ebay_api] OAuth token request failed: {exc}")
         return None
 
     token = data.get("access_token")
     if not token:
+        print(f"[ebay_api] OAuth response had no access_token: {data}")
         return None
     _token_cache["token"] = token
     _token_cache["expires_at"] = time.time() + data.get("expires_in", 7200)
@@ -98,6 +100,12 @@ def _get_token() -> str | None:
 
 
 def _get(url: str, params: dict) -> dict | None:
+    """Every failure path prints why -- ebay_api fails soft to enrich.py's
+    caller either way, but a silent None gives you no way to tell "not
+    enabled for your app" (403) apart from "genuinely no results" (200,
+    empty) apart from "wrong endpoint/shape" (200, unexpected JSON) apart
+    from a network problem. Check the server terminal after a call to see
+    which one actually happened."""
     token = _get_token()
     if not token:
         return None
@@ -112,9 +120,11 @@ def _get(url: str, params: dict) -> dict | None:
             timeout=15,
         )
         if resp.status_code != 200:
+            print(f"[ebay_api] GET {url} returned {resp.status_code}: {resp.text[:500]}")
             return None
         return resp.json()
-    except requests.RequestException:
+    except requests.RequestException as exc:
+        print(f"[ebay_api] GET {url} failed: {exc}")
         return None
 
 
@@ -165,7 +175,9 @@ def search_sold_listings(query: str, limit: int = 25) -> list[dict] | None:
         # Either genuinely no results, or (more likely) this account
         # doesn't have Marketplace Insights enabled and got a differently
         # shaped response. Either way, treat as unavailable rather than
-        # guessing at a shape we haven't confirmed.
+        # guessing at a shape we haven't confirmed. Log the actual keys so
+        # this is diagnosable from the server terminal instead of a guess.
+        print(f"[ebay_api] Marketplace Insights response had no 'itemSales' key; got: {list(data.keys())}")
         return None
     results = []
     for item in items:

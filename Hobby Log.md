@@ -222,3 +222,36 @@ with which source actually produced it (`ebay_api_lookup`/
 visible rather than something to guess at. See
 [[Sports Card Scanning - Build Plan]] and `Sports Card Scanner/README.md`'s
 "Real eBay API integration" section for full detail.
+
+Owner's eBay app showed as "(Non Compliant)" in the developer console --
+turned out to be eBay's Marketplace Account Deletion notification
+requirement, unrelated to anything built here. Researched it live rather
+than guessing (the app only does public client-credentials searches, never
+touches a specific eBay user's account, so the "not persisting eBay data"
+exemption toggle was the right fit, not standing up a public HTTPS
+notification endpoint). Also walked through where the Cert ID (Client
+Secret) actually lives in eBay's console -- a different page than the App
+ID, easy to miss -- and flagged clearly that it's not the same thing as the
+console's short-lived "OAuth Application Token" (which would silently stop
+working after ~2 hours if pasted into `.env` instead).
+
+First real use with real credentials added surfaced an actual gap:
+`card_number` stayed stuck unfilled on a card even with player/set/year all
+confidently known and credentials configured. Root cause: `web_lookup_log`'s
+"attempt once ever" cache was keyed only by player+set+year+field, not by
+which lookup source was tried -- a failure from before eBay credentials
+existed was permanently blocking a retry with the new, better source.
+Fixed by folding whether eBay API is configured into the cache key itself,
+verified with a direct repro. Separately, the price estimate was still
+using the web-search fallback after credentials were added, and there was
+no way to tell why -- every failure path in `ebay_api.py` was completely
+silent. Added diagnostic print logging throughout `ebay_api.py` and at the
+decision point in `enrich.py`, so a stuck field or a fallback-sourced
+estimate is now debuggable from the server terminal (which HTTP status,
+which reason) instead of a guess. Re-ran the full TestClient regression
+suite -- no regressions. Also documented honestly, in the README, that
+there's currently no "retry enrichment" action for an already-scanned card
+sitting in the review list -- the cache-key fix helps future lookups, not
+retroactively fixing a field already stuck on a card scanned before
+credentials existed; a manual correction is the practical fix for those,
+and it teaches the checklist table too.

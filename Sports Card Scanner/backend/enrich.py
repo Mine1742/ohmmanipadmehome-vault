@@ -120,7 +120,14 @@ class EnrichmentError(RuntimeError):
 
 
 def _lookup_key(player_name: str, set_name: str, year: str | None, target_field: str) -> str:
-    return f"{player_name.lower()}|{set_name.lower()}|{year or ''}|{target_field}"
+    """Includes whether eBay API credentials are configured as part of the
+    cache key on purpose. A lookup that failed under the web-search-only
+    fallback shouldn't permanently block a retry once real eBay API
+    credentials get added later -- without this, "attempt once ever"
+    caching would mean the accuracy upgrade never actually gets used for
+    any field that already failed once before you had credentials."""
+    tier = "ebay_api" if ebay_api.configured() else "websearch"
+    return f"{player_name.lower()}|{set_name.lower()}|{year or ''}|{target_field}|{tier}"
 
 
 def _format_ebay_api_results(items: list[dict], sold: bool) -> str:
@@ -163,6 +170,7 @@ def _web_lookup_checklist(
 
     if ebay_api.configured():
         items = ebay_api.search_active_listings(card_desc)
+        print(f"[enrich] Browse API for '{card_desc}': {len(items) if items else 0} listings")
         if items:
             summary = _format_ebay_api_results(items, sold=False)
             source = "ebay_api_lookup"
@@ -377,6 +385,7 @@ def estimate_price_from_ebay(
 
     if ebay_api.configured():
         items = ebay_api.search_sold_listings(card_desc)
+        print(f"[enrich] Marketplace Insights for '{card_desc}': {len(items) if items else 0} sold listings")
         if items:
             summary = _format_ebay_api_results(items, sold=True)
             source = PRICE_ESTIMATE_SOURCE_API
