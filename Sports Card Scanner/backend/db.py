@@ -46,6 +46,26 @@ CREATE TABLE IF NOT EXISTS sets (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(name, year)
 );
+
+CREATE TABLE IF NOT EXISTS checklist_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL REFERENCES players(id),
+    set_id INTEGER NOT NULL REFERENCES sets(id),
+    card_number TEXT NOT NULL,
+    team TEXT,
+    parallel_insert_type TEXT,
+    source TEXT NOT NULL,
+    verified INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(player_id, set_id, card_number)
+);
+
+CREATE TABLE IF NOT EXISTS web_lookup_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lookup_key TEXT NOT NULL,
+    found INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
 
 
@@ -210,6 +230,87 @@ def add_set_alias(set_id: int, alias: str) -> None:
             conn.execute(
                 "UPDATE sets SET aliases_json = ? WHERE id = ?", (json.dumps(aliases), set_id)
             )
+
+
+def find_checklist_entries(
+    player_id: int, set_id: int, card_number: str | None = None
+) -> list[sqlite3.Row]:
+    """Look up known checklist rows for this player+set (the real source of
+    truth for enrichment), optionally narrowed to an exact card_number. With
+    no card_number this can return more than one row (e.g. a base card and
+    an insert for the same player in the same set) -- callers should only
+    auto-fill from the result when it's unambiguous (exactly one row)."""
+    with get_conn() as conn:
+        if card_number:
+            return conn.execute(
+                "SELECT * FROM checklist_entries WHERE player_id = ? AND set_id = ? AND card_number = ?",
+                (player_id, set_id, card_number),
+            ).fetchall()
+        return conn.execute(
+            "SELECT * FROM checklist_entries WHERE player_id = ? AND set_id = ?",
+            (player_id, set_id),
+        ).fetchall()
+
+
+def upsert_checklist_entry(
+    player_id: int,
+    set_id: int,
+    card_number: str,
+    team: str | None = None,
+    parallel_insert_type: str | None = None,
+    source: str = "web_lookup",
+    verified: bool = False,
+) -> sqlite3.Row:
+    """Add or update the checklist row for this exact (player, set,
+    card_number). A verified=True write (from a human review correction)
+    always wins over an existing unverified one; an unverified write never
+    overwrites an already-verified row."""
+    with get_conn() as conn:
+        existing = conn.execute(
+            "SELECT * FROM checklist_entries WHERE player_id = ? AND set_id = ? AND card_number = ?",
+            (player_id, set_id, card_number),
+        ).fetchone()
+        if existing is not None and existing["verified"] and not verified:
+            return existing
+        if existing is not None:
+            conn.execute(
+                "UPDATE checklist_entries SET team = COALESCE(?, team), "
+                "parallel_insert_type = COALESCE(?, parallel_insert_type), "
+                "source = ?, verified = ? WHERE id = ?",
+                (team, parallel_insert_type, source, int(verified), existing["id"]),
+            )
+            return conn.execute(
+                "SELECT * FROM checklist_entries WHERE id = ?", (existing["id"],)
+            ).fetchone()
+        conn.execute(
+            "INSERT INTO checklist_entries "
+            "(player_id, set_id, card_number, team, parallel_insert_type, source, verified) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (player_id, set_id, card_number, team, parallel_insert_type, source, int(verified)),
+        )
+        return conn.execute(
+            "SELECT * FROM checklist_entries WHERE player_id = ? AND set_id = ? AND card_number = ?",
+            (player_id, set_id, card_number),
+        ).fetchone()
+
+
+def has_attempted_web_lookup(lookup_key: str) -> bool:
+    """True if a web lookup for this exact key was already attempted
+    (found or not) -- caps repeat web-search spend on the same missing
+    combo across duplicate/near-duplicate cards."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM web_lookup_log WHERE lookup_key = ? LIMIT 1", (lookup_key,)
+        ).fetchone()
+        return row is not None
+
+
+def log_web_lookup(lookup_key: str, found: bool) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO web_lookup_log (lookup_key, found) VALUES (?, ?)",
+            (lookup_key, int(found)),
+        )
 
 
 def apply_review_correction(job_id: str, field: str, old_value: str | None, new_value: str, reviewer: str) -> None:

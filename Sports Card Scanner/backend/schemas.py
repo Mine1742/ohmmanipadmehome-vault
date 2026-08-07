@@ -9,6 +9,10 @@ class FieldValue(BaseModel):
     canonical_value: Optional[str] = None
     canonical_id: Optional[int] = None
     canonical_score: Optional[float] = None
+    # None = read directly off the card by the vision model. 'local_lookup' /
+    # 'web_lookup' = filled in by enrich.py from checklist_entries or a live
+    # web search. 'human_review' = confirmed/corrected by a person.
+    source: Optional[str] = None
 
 
 class CardFields(BaseModel):

@@ -44,6 +44,30 @@ Phase 2 – Accuracy Upgrade — in progress
   with a live API key. See `Sports Card Scanner/README.md` →
   "Canonicalization & enrichment" for full detail, and
   [[Sports Card Scanning Hub]]'s Operating Guide for the user-facing version.
+- **Fill-in-missing-fields enrichment — done 2026-08-07.** `backend/enrich.py`
+  + `checklist_entries`/`web_lookup_log` tables. Explicit follow-up after
+  realizing the collection is genuinely large-scale (millions of cards, plus
+  non-sports cards/memorabilia) — no static/pre-populated lookup table could
+  cover that, so this is a cache-aside design instead: for a low-confidence
+  `card_number`/`team`/`parallel_insert_type` (not `serial_number` — that's
+  unique per physical card, not a checklist fact), check the local
+  `checklist_entries` table first, fall back to a live web search (a second
+  Claude API call using the existing `ANTHROPIC_API_KEY` and Anthropic's
+  server-side web-search tool) if nothing local exists and the key fields
+  (canonical player/set, confident year) are solid. A found web value writes
+  back into `checklist_entries` so the next matching card hits the local
+  path; each unique (player, set, target-field) combo is only ever attempted
+  once via the web (`web_lookup_log` gates repeats, capping cost at
+  collection scale). Web-sourced values are written below the review
+  threshold on purpose (unconfirmed) — accepting one in review promotes it
+  to a *verified* checklist row. Local-path logic smoke-tested against a temp
+  DB (fail-soft with no API key, attempt-gating, correction-teaches-
+  verified-row, second scan resolves from the local table — plus a real bug
+  caught and fixed in testing, where sibling "N/A" placeholder values were
+  almost written into the checklist table as if confirmed). **The actual
+  live web-search call path has not been tested with a real API key** — next
+  concrete step before trusting this at volume. Full detail:
+  `Sports Card Scanner/README.md` → "Fill-in-missing-fields (`enrich.py`)".
 - On-device crop/deskew (or just accept as-shot photos if accuracy is already
   good enough without it — worth checking before building this) — not started
 - Targeted retry/zoom pass for low-confidence fields, especially serial

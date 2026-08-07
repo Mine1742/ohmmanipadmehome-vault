@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 import canonicalize
 import db
+import enrich
 import extraction
 from schemas import CardFields, FieldValue, ReviewSubmission, ScanResult, UploadResponse
 
@@ -45,6 +46,7 @@ def _run_extraction(job_id: str, image_path_front: str, image_path_back: str | N
         return
 
     fields = canonicalize.canonicalize_fields(fields)
+    fields = enrich.enrich_fields(fields)
 
     needs_review = any(
         f.get("confidence", 0) < CONFIDENCE_REVIEW_THRESHOLD for f in fields.values()
@@ -125,6 +127,8 @@ def submit_review(job_id: str, submission: ReviewSubmission) -> ScanResult:
     if learned:
         canonical_value, canonical_id = learned
         db.set_field_canonical(job_id, submission.field, canonical_value, canonical_id, 100.0)
+
+    enrich.learn_from_correction(submission.field, submission.new_value, old_fields)
 
     return _row_to_result(db.get_card(job_id))
 

@@ -40,12 +40,16 @@ up in the "Needs Review" list below for inline correction.
 - `backend/main.py` — FastAPI app: upload, poll result, review list/submit
 - `backend/extraction.py` — single Claude vision call per card, forced
   structured tool-use output (see `RECORD_CARD_FIELDS_TOOL`)
-- `backend/canonicalize.py` — Phase 2 canonicalization & enrichment
+- `backend/canonicalize.py` — Phase 2 canonicalization
   ([[sports_card_scanning_recommendations]] §2): fuzzy-matches extracted
   `player`/`set` values against a local reference table using RapidFuzz. See
   "Canonicalization & enrichment" below for how it works.
+- `backend/enrich.py` — fill-in-missing-fields on top of canonicalization:
+  looks up low-confidence `card_number`/`team`/`parallel_insert_type` from
+  your own growing checklist first, a live web search second. See
+  "Canonicalization & enrichment" below.
 - `backend/db.py` — SQLite (`data/cards.db`), `cards` + `audit` +
-  `players` + `sets` tables
+  `players` + `sets` + `checklist_entries` + `web_lookup_log` tables
 - `frontend/index.html` — vanilla-JS uploader + review UI, no build step
 
 ## Canonicalization & enrichment
@@ -79,9 +83,51 @@ access:
   `sets` from it via `db.upsert_player` / `db.upsert_set` instead of (or in
   addition to) the auto-learning above — the matching logic in
   `canonicalize.py` doesn't need to change.
-- Team canonicalization and pricing enrichment (the doc's Phase 3 item) are
-  **not** included here — team wasn't in the doc's §4 data model, and
-  pricing is explicitly scoped to Phase 3, not this pass.
+- Pricing enrichment (the doc's Phase 3 item) is **not** included here —
+  explicitly scoped to Phase 3, not this pass.
+
+### Fill-in-missing-fields (`enrich.py`)
+
+Canonicalization above only normalizes *spelling* — it can't tell you a
+card's number, team, or parallel/insert type if the vision model couldn't
+read them. `enrich.py` does that, built for a collection too large to ever
+pre-populate a lookup table for (this was explicitly designed around "millions
+of cards, plus non-sports cards and memorabilia" — see [[Hobby Log]]
+2026-08-07): a **cache-aside** pattern, not a bulk import.
+
+1. **Local first.** Checks `checklist_entries` — the real source of truth,
+   built entirely from your own scans and review corrections, keyed on
+   canonical player + canonical set + card_number.
+2. **Web fallback**, only when the card's *key* fields are solid (canonical
+   player, canonical set, and a confident year — all ≥ 0.85): a second Claude
+   API call, reusing your existing `ANTHROPIC_API_KEY`, using Anthropic's
+   server-side web-search tool to check card-database sites (tcdb.com,
+   Beckett checklists, etc.) for the missing field. Anything found gets
+   written back into `checklist_entries`, so the next card with the same
+   player+set+card_number hits the fast local path instead of searching
+   again.
+3. **Cost cap.** Each unique (player, set, target-field) combo is only ever
+   attempted once via the web (`web_lookup_log`) — duplicate/near-duplicate
+   cards don't re-trigger paid searches for something already known to be
+   missing.
+4. **Trust.** A web-sourced value is written with confidence held at 0.6 —
+   deliberately below the 0.85 review threshold — so it always surfaces once
+   in the "Needs Review" list (labeled "from web lookup, unconfirmed") rather
+   than silently becoming ground truth. Accept it there and it's written as a
+   *verified* `checklist_entries` row, trusted immediately after that. A
+   value pulled from your own already-verified checklist is labeled "from
+   your checklist" instead.
+5. **What's excluded on purpose:** `serial_number`. A print run size
+   ("numbered to 150") is a checklist fact; which specific numbered copy you
+   physically hold ("45/150") is unique to that card and isn't something any
+   lookup can know — that field stays vision/human-only.
+6. **Verify the web-search tool version before relying on this.** The exact
+   Anthropic web-search tool type string (`WEB_SEARCH_TOOL_TYPE` in
+   `enrich.py`, overridable via the `CARD_WEB_SEARCH_TOOL_TYPE` env var)
+   reflects what was known at build time — check current API docs if it
+   starts failing. Enrichment fails soft either way (a bad tool type, no API
+   key, a network error, anything) — it just skips filling that field in
+   rather than breaking the scan.
 
 ## Known simplifications vs. the full recommendations doc
 
@@ -121,6 +167,21 @@ and a review correction both creates the canonical entry and records the
 original wrong value as an alias that a later scan resolves through. Not yet
 exercised through the real upload pipeline with a live API key — do that
 before trusting it against the actual collection.
+
+**Fill-in-missing-fields (`enrich.py`) smoke-tested 2026-08-07**, local path
+only (no `ANTHROPIC_API_KEY` set in the test environment, so the web-lookup
+path could only be verified to fail soft, not verified to actually find
+anything real): confirmed enrichment doesn't crash without an API key, a
+failed web-lookup attempt gets logged so an identical second scan doesn't
+retry it, a human correction writes a *verified* `checklist_entries` row,
+and a second scan of the same player+set+year then fills the missing
+`card_number` from that local row instead of touching the web at all — and
+confirmed a fix where sibling "N/A" placeholder values were almost getting
+written into the checklist table as if they were confirmed data (fixed
+before commit). **The actual web-search call path (Claude's server-side
+web-search tool doing a real lookup) has not been tested with a live API
+key** — that's the next real thing to verify, including whether
+`WEB_SEARCH_TOOL_TYPE` is still the correct tool version.
 
 **Windows gotcha hit during testing:** `kill $!` from a background-launched
 git-bash job doesn't map to the real Windows PID for a spawned `uvicorn`

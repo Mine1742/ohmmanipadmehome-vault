@@ -56,3 +56,41 @@ through the real upload pipeline with a live key; that's the natural next check
 before trusting it against the actual collection. See
 [[Sports Card Scanning - Build Plan]] and `Sports Card Scanner/README.md` for
 full detail.
+
+Clarified an important scope point about that canonicalization work: it normalizes
+*spelling* of already-extracted player/set values, it does not fill in fields the
+vision model couldn't read at all. The owner's actual collection is millions of
+cards plus non-sports cards and memorabilia — far too large for any static or
+pre-populated lookup table, ruling out the "generate a complete sports card
+lookup table" framing initially assumed. Landed on a cache-aside design instead:
+for a low-confidence `card_number`/`team`/`parallel_insert_type`, check a local
+`checklist_entries` table first, fall back to a live web search only if nothing
+local exists and the key fields (canonical player/set, confident year) are
+solid, and write anything found back into the local table so the same gap is
+never searched twice.
+
+Implemented as `backend/enrich.py` + `checklist_entries`/`web_lookup_log`
+tables. The web fallback reuses the existing `ANTHROPIC_API_KEY` via a second
+Claude API call using Anthropic's server-side web-search tool (searches
+card-database sites like tcdb.com/Beckett rather than a maintained scraper) —
+no new credential needed. Web-sourced values are written below the review
+threshold on purpose so they always get a quick human glance before being
+trusted; accepting one in review promotes it to a verified checklist row.
+Wired into both the extraction pipeline and the review-correction endpoint,
+alongside a `source` tag (`local_lookup`/`web_lookup`/`human_review`) surfaced
+in the review UI so it's always clear where a value came from. Deliberately
+excluded `serial_number` — a print-run size is a checklist fact, but which
+specific numbered copy is physically in hand isn't something any lookup can
+know.
+
+Smoke-tested the local half of the pipeline against a temp DB: fails soft with
+no API key, a failed web-lookup attempt gets logged so an identical scan
+doesn't retry it, a human correction writes a verified checklist row, and a
+second scan of the same player+set+year fills the missing field from that
+local row. Caught and fixed a real bug during testing — sibling "N/A"
+placeholder values were almost getting written into the checklist table as if
+they were confirmed data. The live web-search call itself hasn't been
+exercised with a real API key yet; that's the next concrete thing to verify,
+including whether the web-search tool version string in `enrich.py` is still
+current. See [[Sports Card Scanning - Build Plan]] and
+`Sports Card Scanner/README.md` for full detail.

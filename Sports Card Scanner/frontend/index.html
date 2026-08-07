@@ -125,11 +125,15 @@ async function loadReviewList() {
       const canon = f.canonical_value
         ? ` <small class="hint">≈ ${f.canonical_value} (${Math.round(f.canonical_score)}% match)</small>`
         : "";
+      const sourceLabels = { local_lookup: "from your checklist", web_lookup: "from web lookup, unconfirmed", human_review: "human-confirmed" };
+      const source = f.source
+        ? ` <small class="hint">[${sourceLabels[f.source] || f.source}]</small>`
+        : "";
       html += `<div class="field-row">
         <span class="name ${lowClass}">${name} (${f.confidence.toFixed(2)})</span>
         <input type="text" value="${(f.value ?? "").replace(/"/g, '&quot;')}" data-field="${name}">
         <button data-save="${name}" data-job="${card.job_id}">Save</button>
-        ${canon}
+        ${canon}${source}
       </div>`;
     }
     row.innerHTML = html;
