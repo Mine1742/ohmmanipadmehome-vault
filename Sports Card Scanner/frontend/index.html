@@ -104,8 +104,38 @@ async function pollResult(jobId, resultDiv) {
     resultDiv.textContent = "Extraction failed: " + data.error;
     return;
   }
-  resultDiv.innerHTML = "<pre>" + JSON.stringify(data.fields, null, 2) + "</pre>";
+  resultDiv.innerHTML = "<pre>" + JSON.stringify(data.fields, null, 2) + "</pre>" + priceFormHtml(data);
+  wirePriceForms(resultDiv);
   loadReviewList();
+}
+
+function priceFormHtml(card) {
+  const price = card.price ?? "";
+  const date = card.date_priced ?? "";
+  return `<div class="field-row">
+    <span class="name">price</span>
+    <input type="number" step="0.01" min="0" placeholder="e.g. 25.00" data-price-input="${card.job_id}" value="${price}">
+    <input type="date" data-date-input="${card.job_id}" value="${date}">
+    <button data-save-price="${card.job_id}">Save Price</button>
+  </div>`;
+}
+
+function wirePriceForms(container) {
+  container.querySelectorAll("button[data-save-price]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const jobId = btn.getAttribute("data-save-price");
+      const priceInput = container.querySelector(`input[data-price-input="${jobId}"]`);
+      const dateInput = container.querySelector(`input[data-date-input="${jobId}"]`);
+      const price = parseFloat(priceInput.value);
+      if (Number.isNaN(price) || price < 0) { alert("Enter a valid, non-negative price."); return; }
+      await fetch(`/scan/${jobId}/price`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price, date_priced: dateInput.value || null }),
+      });
+      btn.textContent = "Saved";
+    });
+  });
 }
 
 async function loadReviewList() {
@@ -136,6 +166,7 @@ async function loadReviewList() {
         ${canon}${source}
       </div>`;
     }
+    html += priceFormHtml(card);
     row.innerHTML = html;
     listDiv.appendChild(row);
   }
@@ -153,6 +184,7 @@ async function loadReviewList() {
       loadReviewList();
     });
   });
+  wirePriceForms(listDiv);
 }
 
 loadReviewList();

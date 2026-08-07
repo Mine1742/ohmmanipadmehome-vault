@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS cards (
     error TEXT,
     image_path_front TEXT NOT NULL,
     image_path_back TEXT,
+    price REAL,
+    date_priced TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -81,9 +83,21 @@ def get_conn():
         conn.close()
 
 
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, coltype: str) -> None:
+    """Idempotent ALTER TABLE, so an already-existing cards.db from before a
+    schema change (like adding price/date_priced) picks up the new column
+    without needing to be deleted/recreated. No-op on a fresh DB, since
+    SCHEMA's CREATE TABLE already includes the column."""
+    existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    if column not in existing:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+
+
 def init_db() -> None:
     with get_conn() as conn:
         conn.executescript(SCHEMA)
+        _ensure_column(conn, "cards", "price", "REAL")
+        _ensure_column(conn, "cards", "date_priced", "TEXT")
 
 
 def create_card(job_id: str, image_path_front: str, image_path_back: str | None) -> None:
@@ -92,6 +106,14 @@ def create_card(job_id: str, image_path_front: str, image_path_back: str | None)
             "INSERT INTO cards (job_id, status, image_path_front, image_path_back) "
             "VALUES (?, 'processing', ?, ?)",
             (job_id, image_path_front, image_path_back),
+        )
+
+
+def set_price(job_id: str, price: float, date_priced: str) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE cards SET price = ?, date_priced = ? WHERE job_id = ?",
+            (price, date_priced, job_id),
         )
 
 

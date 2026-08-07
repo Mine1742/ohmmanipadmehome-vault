@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class FieldValue(BaseModel):
@@ -39,9 +39,18 @@ class ScanResult(BaseModel):
     fields: Optional[CardFields] = None
     needs_review: bool = False
     error: Optional[str] = None
+    price: Optional[float] = None
+    date_priced: Optional[str] = None
 
 
 class ReviewSubmission(BaseModel):
     field: str
     new_value: str
     reviewer: str = "owner"
+
+
+class PriceSubmission(BaseModel):
+    price: float = Field(ge=0)
+    # ISO date string (YYYY-MM-DD), e.g. when you looked the price up. Defaults
+    # to today (server-side) if omitted -- see main.py's /scan/{job_id}/price.
+    date_priced: Optional[str] = None

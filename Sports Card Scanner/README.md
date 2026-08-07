@@ -33,7 +33,9 @@ uvicorn main:app --reload --port 8000
 
 Open http://localhost:8000 — drag-and-drop a front (and optionally back) card
 photo, it uploads, scans via Claude, and any field under 0.85 confidence shows
-up in the "Needs Review" list below for inline correction.
+up in the "Needs Review" list below for inline correction. A price + date
+field is shown under every scan result for you to fill in manually (see
+"Price tracking" below) — it's not extracted or looked up automatically.
 
 ## What's here
 
@@ -83,8 +85,9 @@ access:
   `sets` from it via `db.upsert_player` / `db.upsert_set` instead of (or in
   addition to) the auto-learning above — the matching logic in
   `canonicalize.py` doesn't need to change.
-- Pricing enrichment (the doc's Phase 3 item) is **not** included here —
-  explicitly scoped to Phase 3, not this pass.
+- **Automated** pricing enrichment (the doc's Phase 3 item — a live lookup
+  against TCG Price Lookup or similar) is **not** included here — a *manual*
+  price field exists instead, see "Price tracking" below.
 
 ### Fill-in-missing-fields (`enrich.py`)
 
@@ -128,6 +131,30 @@ of cards, plus non-sports cards and memorabilia" — see [[Hobby Log]]
    starts failing. Enrichment fails soft either way (a bad tool type, no API
    key, a network error, anything) — it just skips filling that field in
    rather than breaking the scan.
+
+## Price tracking
+
+A `price` (number) and `date_priced` (date) field exist on every card,
+editable from the UI right under a scan's result and under each flagged
+card in "Needs Review" — `POST /scan/{job_id}/price`, `{"price": 25.00,
+"date_priced": "2026-08-10"}` (`date_priced` defaults to today if omitted).
+
+**Deliberately manual, not auto-populated.** Unlike `card_number`/`team`/
+etc., a price isn't printed on the card for the vision model to read, and
+unlike those fields it isn't a fixed fact — it changes over time and depends
+heavily on condition/grade, which isn't currently tracked at all (a PSA 10
+vs. a raw/played copy of the same card can differ 10–100x in value). An
+auto-lookup version would need its own design (staleness/refresh handling,
+a condition/grade field, another paid web-search call per card) — this is
+intentionally just the simple version: you look the price up yourself and
+log it.
+
+**No browsable "all cards" view yet.** The price form only appears next to
+a card right after you scan it, or if that card is currently flagged in
+"Needs Review". A card that scanned clean (no fields under threshold) has no
+other UI entry point to add/edit its price later — set it right after
+scanning, or query/update `cards.db` directly (see "Where your data lives"
+in [[Sports Card Scanning Hub]]) until a general browse/edit view exists.
 
 ## Known simplifications vs. the full recommendations doc
 

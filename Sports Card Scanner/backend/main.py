@@ -1,3 +1,4 @@
+import datetime
 import json
 import uuid
 from pathlib import Path
@@ -14,7 +15,7 @@ import canonicalize
 import db
 import enrich
 import extraction
-from schemas import CardFields, FieldValue, ReviewSubmission, ScanResult, UploadResponse
+from schemas import CardFields, FieldValue, PriceSubmission, ReviewSubmission, ScanResult, UploadResponse
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 IMAGES_DIR = DATA_DIR / "images"
@@ -90,6 +91,8 @@ def _row_to_result(row) -> ScanResult:
         fields=fields,
         needs_review=bool(row["needs_review"]),
         error=row["error"],
+        price=row["price"],
+        date_priced=row["date_priced"],
     )
 
 
@@ -130,6 +133,16 @@ def submit_review(job_id: str, submission: ReviewSubmission) -> ScanResult:
 
     enrich.learn_from_correction(submission.field, submission.new_value, old_fields)
 
+    return _row_to_result(db.get_card(job_id))
+
+
+@app.post("/scan/{job_id}/price")
+def submit_price(job_id: str, submission: PriceSubmission) -> ScanResult:
+    row = db.get_card(job_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    date_priced = submission.date_priced or datetime.date.today().isoformat()
+    db.set_price(job_id, submission.price, date_priced)
     return _row_to_result(db.get_card(job_id))
 
 

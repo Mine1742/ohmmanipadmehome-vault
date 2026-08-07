@@ -78,8 +78,24 @@ Phase 2 – Accuracy Upgrade — in progress
 
 Phase 3 – Production Quality — not started
 - Serial-number OCR fallback (PaddleOCR-VL/GLM-OCR) for cases Claude misses
-- Pricing/enrichment via TCG Price Lookup
+- Automated pricing/enrichment via TCG Price Lookup (see the manual version
+  already done below, outside the original doc's phase structure)
 - Batch API usage for bulk re-scans
 - Periodic re-run of the evaluation set to catch model/prompt regressions
+
+Outside the original doc's phases (added by direct request)
+- **Manual price tracking — done 2026-08-07.** `cards.price` +
+  `cards.date_priced` columns (with an idempotent `ALTER TABLE` migration in
+  `db.init_db()` so an already-existing `cards.db` picks up the columns
+  without data loss — verified against a simulated pre-migration DB), a
+  `POST /scan/{job_id}/price` endpoint, and a price+date form in the UI under
+  every scan result and every flagged review card. Deliberately manual, not
+  looked up — price isn't printed on a card for vision to read, isn't a
+  fixed fact like card_number (it changes over time), and is heavily
+  condition/grade-dependent, which isn't tracked yet. An automated version
+  would need its own design (staleness/refresh handling, a condition/grade
+  field) — logged above under Phase 3 as a possible future pass. Known gap:
+  no general "browse all cards" view yet, so a clean-scanning card (nothing
+  flagged for review) can only get a price set right after its scan.
 
 See [[Hobby Log]] for the dated narrative.

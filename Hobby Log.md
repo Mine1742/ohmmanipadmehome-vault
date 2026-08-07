@@ -94,3 +94,17 @@ exercised with a real API key yet; that's the next concrete thing to verify,
 including whether the web-search tool version string in `enrich.py` is still
 current. See [[Sports Card Scanning - Build Plan]] and
 `Sports Card Scanner/README.md` for full detail.
+
+Added a manual `price` + `date_priced` field per card, by request — deliberately
+not auto-looked-up: unlike card_number/team, price changes over time and is
+heavily condition/grade-dependent (which isn't tracked at all yet), so an
+accurate auto-lookup would need its own design pass rather than reusing
+`enrich.py`'s pattern as-is. `cards.db` already had real data on the owner's
+machine by this point, so used an idempotent `ALTER TABLE` migration in
+`db.init_db()` rather than assuming a fresh table — verified against a
+simulated pre-migration DB that the existing row survives and repeated
+restarts don't error. Added a price+date form to the UI, shown right after any
+scan completes and next to each flagged review card. Known gap, called out in
+the docs rather than left implicit: there's no general "browse all cards" view
+yet, so a card that scans clean (nothing flagged) only gets one chance at
+having its price set, right after that scan.
